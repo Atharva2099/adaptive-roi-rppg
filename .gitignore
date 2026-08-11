@@ -1,0 +1,65 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+ENV/
+
+# Editors and local tooling
+.idea/
+.vscode/
+*.swp
+*.swo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Logs, temporary work, and local environments
+*.log
+/temp/
+/.env
+/.env.*
+!/.env.example
+*.local
+
+# Local datasets and generated artifacts
+/data/
+/datasets/
+/results/
+/outputs/
+/artifacts/
+/checkpoints/
+/models/
+*.ckpt
+*.pt
+*.pth
+*.pkl
+*.pickle
+*.joblib
+
+# Credentials and secret material
+/.secrets/
+/secrets/
+/credentials/
+/credentials.json
+/secrets.json
+/secret*.json
+/*.pem
+/*.key
+/*.crt
