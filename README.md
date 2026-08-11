@@ -4,7 +4,7 @@ This project studies whether a lightweight controller can adaptively select sema
 
 ## Current phase
 
-This is the new long-term project repository. We are currently migrating the useful knowledge from the legacy project and redesigning the system from first principles. No new implementation exists yet; implementation will be built here after the design is approved.
+Batch 1 is implemented: the repository now contains the dataset-neutral contract records, manifest validators, local integrity helpers, and standard-library tests. Later gates remain pending.
 
 ## Research question
 
@@ -35,10 +35,10 @@ adaptive-roi-rppg/
 
 ## Status and evidence
 
-Current status: foundation files only; implementation and new results are pending.
+Current status: Batch 1 contracts and validators are implemented; no new research result exists. Run the tests with `PYTHONPATH=src python3 -m unittest discover -s tests -v`.
 
 Evidence labels will distinguish `FACT`, `HYPOTHESIS`, `LIMITATION`, `SUPERSEDED`, `NEGATIVE RESULT`, and `INCOMPLETE`. The evidence registry will recompute pivotal values from row-level artifacts or explicitly mark them as unavailable. No model numbers are reported here yet.
 
-## Next documentation step
+## Remaining gates
 
-Define and approve the system boundary, causal state and action interfaces, dataset split and leakage rules, evaluation rulers, and evidence-registry schema before adding implementation.
+Gates 2-8 remain pending. Batch 1 does not implement dataset adapters, signal processing, controller behavior, evaluation, MMPD access, DAgger, PPO, or launchers.

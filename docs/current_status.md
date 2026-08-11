@@ -2,7 +2,7 @@
 
 ## State
 
-The repository is in documentation and migration stage. No implementation, training, or new result has been added.
+Gate 1, contracts and validators, is implemented with standard-library runtime code and `unittest` tests. No training or new result has been added.
 
 MCD remains the only training and development dataset. MMPD is evaluation-only for frozen MCD checkpoints. MMPD findings cannot guide MCD training, feature, reward, checkpoint, hyperparameter, or stopping decisions.
 
@@ -34,4 +34,4 @@ Official POS and causal-controller rulers are not a smoothing ablation: crop/orc
 
 ## Next action
 
-After these documents are approved, implement contracts and MCD-only causal data/signal parity checks. Do not train PPO and do not implement the MMPD adapter first. Detailed evidence remains in E-010–E-013 and E-016; this status is not a second evidence registry.
+Implement Gate 2, the MCD manifest/split adapter. Do not train PPO and do not implement the MMPD adapter first. MMPD remains evaluation-only and cannot guide MCD decisions. Detailed evidence remains in E-010–E-013 and E-016; this status is not a second evidence registry.
