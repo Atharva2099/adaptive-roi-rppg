@@ -54,6 +54,10 @@ class RecordTests(unittest.TestCase):
         record = CanonicalFrame("d", "c", 4, 4.0, 30.0, 0.0, 1.0, 2.0, values, "p")
         self.assertEqual(CanonicalFrame.from_dict(record.to_dict()), record)
         self.assertEqual(record.roi_values[0].roi_name, ROIName.full_face)
+        missing_pose = CanonicalFrame("d", "c", 0, 0.0, 30.0, None, None, None, values, "p")
+        self.assertEqual(CanonicalFrame.from_dict(missing_pose.to_dict()), missing_pose)
+        with self.assertRaises(ContractValidationError):
+            CanonicalFrame("d", "c", 0, 0.0, 30.0, None, 1.0, None, values, "p")
 
     def test_missing_reordered_duplicate_and_mismatch_rejected(self):
         values = [frame_value(index) for index in range(12)]

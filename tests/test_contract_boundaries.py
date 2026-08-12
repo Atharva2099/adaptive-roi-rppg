@@ -52,5 +52,5 @@ class BoundaryTests(unittest.TestCase):
         self.assertEqual(project["name"], "adaptive-roi-rppg")
         self.assertEqual(project["version"], "0.1.0")
         self.assertEqual(project["requires-python"], ">=3.11")
-        self.assertEqual(project["dependencies"], [])
+        self.assertEqual(project["dependencies"], ["numpy>=2.2,<3", "scipy>=1.17,<2"])
         self.assertFalse(config["tool"]["uv"]["package"])

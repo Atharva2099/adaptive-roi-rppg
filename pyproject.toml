@@ -3,7 +3,7 @@ name = "adaptive-roi-rppg"
 version = "0.1.0"
 description = "Contracts and causal evaluation foundations for adaptive semantic ROI rPPG control"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = ["numpy>=2.2,<3", "scipy>=1.17,<2"]
 
 [tool.uv]
 package = false

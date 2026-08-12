@@ -200,9 +200,9 @@ class CanonicalFrame:
     frame_idx: int
     timestamp_s: float
     camera_fps: float
-    head_yaw_deg: float
-    head_pitch_deg: float
-    head_roll_deg: float
+    head_yaw_deg: float | None
+    head_pitch_deg: float | None
+    head_roll_deg: float | None
     roi_values: tuple[ROIFrameValue, ...]
     provenance_id: str
 
@@ -210,11 +210,20 @@ class CanonicalFrame:
         for field in ("dataset_id", "clip_id", "provenance_id"):
             object.__setattr__(self, field, _required_string(getattr(self, field), field))
         object.__setattr__(self, "frame_idx", _int(self.frame_idx, "frame_idx", minimum=0))
-        for field in ("timestamp_s", "camera_fps", "head_yaw_deg", "head_pitch_deg", "head_roll_deg"):
+        for field in ("timestamp_s", "camera_fps"):
             value = _number(getattr(self, field), field)
             if field == "camera_fps" and value <= 0:
                 raise _error(field, "must be > 0")
             object.__setattr__(self, field, value)
+        pose = tuple(getattr(self, field) for field in ("head_yaw_deg", "head_pitch_deg", "head_roll_deg"))
+        if all(value is None for value in pose):
+            pass
+        elif all(isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) for value in pose):
+            object.__setattr__(self, "head_yaw_deg", float(pose[0]))
+            object.__setattr__(self, "head_pitch_deg", float(pose[1]))
+            object.__setattr__(self, "head_roll_deg", float(pose[2]))
+        else:
+            raise _error("pose", "must contain three finite values or three nulls")
         if not isinstance(self.roi_values, (list, tuple)) or len(self.roi_values) != len(ROI_NAMES):
             raise _error("roi_values", "must contain exactly 12 records")
         values = tuple(value if isinstance(value, ROIFrameValue) else ROIFrameValue.from_dict(value) for value in self.roi_values)

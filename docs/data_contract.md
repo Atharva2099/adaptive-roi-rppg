@@ -29,13 +29,19 @@ The exact ROI order is:
 
 ## Raw MCD frames
 
-Required state columns, in order, are `frame_idx`, `head_yaw`, `head_pitch`, `head_roll`, followed for every ROI in canonical order by `r_mean`, `g_mean`, `b_mean`, `std`, `coverage`. This is 64 columns: 4 global plus 12 x 5. Frame index is integer >=0; pose is in degrees; RGB/statistics are finite numeric values in the source scale recorded by the manifest; coverage is expected in [0,1]. Rescaling requires a transformation record.
+Required state columns, in exact order, are `frame_idx`, `head_yaw`, `head_pitch`, `head_roll`, followed by `f"{roi}_{field}"` for each canonical ROI and, within each ROI, `r_mean`, `g_mean`, `b_mean`, `std`, `coverage`. This is exactly 64 columns: 4 global plus 12 x 5. GT is exactly `frame_idx,gt_ppg`. The Gate 2 schema ID is `mcd-semantic-state-64-structured-missing-paired-gt-v2`. The only raw absence token is exactly `""`; whitespace-only text, `nan`, `NaN`, `inf`, `-inf`, `null`, and other text are invalid. Frame index uses only `0` or an unsigned non-padded decimal, is nonnegative, unique, and strictly increasing; gaps are allowed. Pose is either all three raw fields absent or all three present and finite. Each ROI coverage is present, finite, and in [0,1]. At zero coverage, all four ROI measurements are exactly absent; above zero, all four are present and finite. Partial groups fail. Rows are retained and joined exactly by frame index: there is no fill, interpolation, normalization, rescaling, dropping, or imputation, and no raw value is changed. Gate 3 owns downstream causal handling of an absent measurement.
+
+MCD source filenames use the exact case-sensitive stem `<subject_id>_<camera_id>_<condition>`, where `subject_id` matches `[A-Za-z0-9][A-Za-z0-9.-]*` with no underscore, `camera_id` is `FullHDwebcam`, `USBVideo`, or `IriunWebcam`, and `condition` is exactly `before` or `after`. State and GT suffixes are respectively `_semantic_state_vectors.csv` and `_ground_truth.csv`. Portable locators are fixed `state/<filename>` and `gt/<filename>` values; their roots are supplied separately and are never part of identity.
+
+The split input is exactly a UTF-8 CSV with header `subject_id,split`. It has one row for every discovered subject, exactly once, with `split` equal to `train` or `eval`; both arms are nonempty. There is no ratio, seed, shuffle, inference, fallback, or random split. `SplitManifest.source_hashes` is ordered as the split CSV byte hash followed by the canonical source-inventory JSON hash.
 
 GT CSV requires `frame_idx`, `gt_ppg`. Alignment is an exact one-to-one frame-index join; missing or duplicate keys fail unless a separately approved policy is named. FullHDwebcam and USBVideo are 30 Hz; IriunWebcam is 24 Hz. Unknown cameras fail closed.
 
 ## Canonical records
 
 `CanonicalFrame` contains dataset ID, clip ID, frame index, timestamp, camera FPS, pose, 12 ordered `ROIFrameValue` records, and provenance. It has no GT.
+
+Pose annotations are exactly either all three finite floats or all three null: `head_yaw_deg`, `head_pitch_deg`, and `head_roll_deg` must be a complete finite triplet or a complete null triplet. Partial null pose annotations are invalid.
 
 `ROIMeasurement` contains `roi_index`, `roi_name`, `hr_bpm`, `confidence`, `peak_power_ratio`, `coverage`, `valid`, `invalid_reason`, `imputed_channels`, `max_imputation_age_frames`, `source_frame_start`, `source_frame_end`, and `signal_config_id`. `MeasurementFrame` contains dataset ID, clip ID, hop index/time, 12 measurements, signal-config ID, and causal validity/provenance. It has no GT.
 
@@ -50,7 +56,7 @@ Required field contract:
 | `CanonicalFrame` | `frame_idx` | `int` / frame index | non-null | integer >=0; strictly increasing within clip |
 | `CanonicalFrame` | `timestamp_s` | `float` / seconds | non-null | finite; strictly increasing within clip |
 | `CanonicalFrame` | `camera_fps` | `float` / Hz | non-null | finite; FullHDwebcam/USBVideo 30, IriunWebcam 24; unknown fails |
-| `CanonicalFrame` | `head_yaw_deg`, `head_pitch_deg`, `head_roll_deg` | `float` / degrees | non-null when frame valid | finite; source validity is manifest-declared |
+| `CanonicalFrame` | `head_yaw_deg`, `head_pitch_deg`, `head_roll_deg` | `float` / degrees | all three finite or all three null | partial pose is invalid; source validity is manifest-declared |
 | `CanonicalFrame` | `roi_values` | fixed ordered 12 `ROIFrameValue` records | non-null | exact canonical ROI order; no GT |
 | `CanonicalFrame` | `provenance_id` | `str` / provenance identifier | non-null | resolves to source manifest; no GT |
 | `ROIFrameValue` | `roi_index` | `int` / index | non-null | exactly 0-11 and matches order |
@@ -127,6 +133,8 @@ Required field contract:
 
 Serialized missing numeric values are null plus `valid=false` and an invalid reason, never magic zero. Numeric arrays must be finite when marked valid.
 
+Gate 2 emits typed `ClipManifest`, `SplitManifest`, and `DatasetManifest` objects plus a strict source-inventory JSON object. Their IDs hash canonical JSON identity payloads: clip fields excluding `clip_manifest_id,status`; split fields excluding `split_id,status`; and dataset fields excluding `manifest_id,created_at_utc,producer_command,status`. IDs are independent of absolute roots. The output tree is complete only when `dataset_manifest.json` exists and validates; it is the completion credential.
+
 ## Label separation and historical compatibility
 
 Inference manifests reject `gt_ppg`, `gt_hr`, `c_seq`, `b_seq`, `dataset_id`, subject, view, and condition as observation fields. Training joins measurements and labels only by validated `(dataset_id, clip_id, hop_idx)` keys. The MCD GT rule is `causal_periodogram_peak_no_subharmonic_v3`, with a centered 8-second label window and MCD subharmonic correction false. Centering is permitted for labels, not online features. The MMPD corrected-GT rule is separate and exists only in evaluation manifests.
@@ -134,6 +142,8 @@ Inference manifests reject `gt_ppg`, `gt_hr`, `c_seq`, `b_seq`, `dataset_id`, su
 The legacy Phase-1 NPZ compatibility envelope records exactly `hr_meas`, `conf`, `ppr`, `cov`, `gt_hr`, `c_seq`, `b_seq`, `view`, `condition`, `fs`, `stem`, plus exact dataset/schema/GT metadata. It is not the new canonical storage design because it mixes measurements, labels, and metadata.
 
 ## Missing data and causality
+
+Gate 3 currently implements a state-only MCD `CanonicalFrame` reader and the frozen causal POS measurement profile. This implementation is in progress and is not an acceptance result. It does not open labels, use ground truth, or perform fill; the separate causal-fill refinement remains pending.
 
 Full-clip linear interpolation is prohibited in canonical production builds. Past-only fill requires declared `max_fill_age_frames`; until approved, the canonical builder fails on a missing required RGB value rather than guessing. Each filled channel stores `imputation_age_frames` and `imputation_origin_frame_idx`; origin indices are no later than the current `frame_idx` and pair one-to-one with ages. A measurement records the exact inclusive source-frame range and cannot use a frame after its hop timestamp.
 

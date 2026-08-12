@@ -11,7 +11,7 @@ The first implementation target is historical schema-v3 parity on MCD, followed 
 The packages and one-way dependencies are:
 
 1. `core/contracts`: dataset-neutral immutable types, enums, validators, hashes, and errors. It imports nothing project-specific.
-2. `data/mcd`: MCD-only raw discovery, manifest validation, subject-disjoint split loading, and canonical frame emission.
+2. `data/mcd`: MCD-only raw discovery, manifest validation, and subject-disjoint split loading. Gate 2 publishes source and dataset manifests only; canonical frame emission is a later gate.
 3. `signal`: causal POS/HR measurement construction from canonical frames. It cannot import labels, training, evaluation adapters, or dataset-specific modules.
 4. `labels/mcd`: centered GT HR labels and GT-informed teacher artifacts for MCD training/evaluation only. Deployable inference modules cannot import it.
 5. `control`: belief update, observation construction, action legality, and environment transition. Reward calculation receives labels only through a training-only adapter.
@@ -109,7 +109,7 @@ Fail closed for unknown ROI order, missing fields, hash mismatch, duplicate keys
 
 ## Implementation order and gates
 
-No code is added in this documentation change. Later implementation order is fixed:
+Gate 1 contracts and validators are complete. Gate 2 passed independent review and full-data MCD acceptance on Polaris job `46838`. Gate 3 passed independent review and real train-only MCD structural acceptance on Polaris job `46896`. Gate 4 planning has not started. The implementation order remains fixed:
 
 1. Contracts and validators.
 2. MCD manifest/split adapter.

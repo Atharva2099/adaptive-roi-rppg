@@ -4,7 +4,7 @@ This project studies whether a lightweight controller can adaptively select sema
 
 ## Current phase
 
-Batch 1 is implemented: the repository now contains the dataset-neutral contract records, manifest validators, local integrity helpers, and standard-library tests. Later gates remain pending.
+See the [current project status](docs/current_status.md), the [Gate 2 adapter note](docs/gates/gate_02_mcd_manifest_adapter.md), and the [Gate 3 causal POS note](docs/gates/gate_03_causal_pos.md).
 
 ## Research question
 
@@ -32,13 +32,3 @@ adaptive-roi-rppg/
 ├── slurm/         # approved cluster launchers, if needed later
 └── tests/         # tests and known-answer smoke checks
 ```
-
-## Status and evidence
-
-Current status: Batch 1 contracts and validators are implemented; no new research result exists. Run the tests with `PYTHONPATH=src python3 -m unittest discover -s tests -v`.
-
-Evidence labels will distinguish `FACT`, `HYPOTHESIS`, `LIMITATION`, `SUPERSEDED`, `NEGATIVE RESULT`, and `INCOMPLETE`. The evidence registry will recompute pivotal values from row-level artifacts or explicitly mark them as unavailable. No model numbers are reported here yet.
-
-## Remaining gates
-
-Gates 2-8 remain pending. Batch 1 does not implement dataset adapters, signal processing, controller behavior, evaluation, MMPD access, DAgger, PPO, or launchers.

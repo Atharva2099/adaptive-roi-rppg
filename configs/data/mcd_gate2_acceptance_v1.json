@@ -1,0 +1,1 @@
+{"split_sha256":"efed747047950bf885797769ed717882a577302a76355896d95f035380d17d6b","train_subjects":510,"eval_subjects":90,"total_subjects":600,"total_clips":3600,"camera_condition_combinations":[["FullHDwebcam","before"],["FullHDwebcam","after"],["USBVideo","before"],["USBVideo","after"],["IriunWebcam","before"],["IriunWebcam","after"]]}

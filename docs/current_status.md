@@ -1,37 +1,40 @@
-# Current status — 2026-08-10
+# Current status — 2026-08-11
 
-## State
+## Gate tracker
 
-Gate 1, contracts and validators, is implemented with standard-library runtime code and `unittest` tests. No training or new result has been added.
+| Gate | Status |
+|---|---|
+| 1. Contracts and validators | Complete |
+| 2. MCD manifest/split adapter | Complete: SOL-reviewed and accepted on full MCD inventory |
+| 3. Causal signal builder with synthetic numeric tests | Complete: SOL-reviewed and accepted on Polaris job `46896` |
+| 4. Belief tracker and action legality | Next: planning not started |
+| 5. Frozen evaluator and row-level outputs | Blocked by gate order |
+| 6. Historical parity replay on a small MCD fixture, then full MCD parity | Blocked by gate order |
+| 7. MCD-only training adapters | Blocked by gate order |
+| 8. MMPD frozen-evaluation adapter last | Blocked by gate order |
 
-MCD remains the only training and development dataset. MMPD is evaluation-only for frozen MCD checkpoints. MMPD findings cannot guide MCD training, feature, reward, checkpoint, hyperparameter, or stopping decisions.
+Gate 2 passed independent SOL review and full-data acceptance on Polaris job `46838`. Gate 3 passed independent SOL review after local and Linux tests plus a real, train-only MCD structural smoke on Polaris job `46896`. No training, controller work, GT reading, or MMPD access was performed.
 
-## Frozen MCD ruler
+## What changed
 
-Schema-v3 no-subharmonic test90 uses 533 clips from 89 subjects, 8-second trailing windows, 1-second hops, post-update belief-mean error, and equal per-clip aggregation. Full-face is **12.3865 BPM** and Oracle-C K=8 is **2.1084 BPM**. See E-004 and E-005.
+Gate 3 adds a concise NumPy/SciPy implementation of classical POS, fixed trailing-window measurement rules, and a state-only MCD reader. The reader authenticates the state CSV selected by the Gate 2 manifest and exposes no GT path or API. The exact numerical choices, command, evidence hashes, and limitations are kept in [the Gate 3 note](gates/gate_03_causal_pos.md), separate from this overview.
 
-## Current result
+## Verified checks
 
-| Method | Seed 0 | Seed 1 | Seed 2 | Three-seed mean |
-|---|---:|---:|---:|---:|
-| **DAgger base** | **7.6044** | **7.9429** | **8.7998** | **8.1157 BPM** |
-| **Advantage PPO** | **7.3318** | **7.2135** | **7.5792** | **7.3748 BPM** |
+The complete local suite has 45 passing tests. The same 45 tests passed on Linux/Polaris with Python 3.13.12, NumPy 2.2.0, and SciPy 1.17.1. Gate 3 checks include a synthetic 1.2 Hz known-answer signal at 24 and 30 FPS, malformed and degenerate inputs, exact hop boundaries, clip reset, fail-closed missing RGB, deterministic output, and authenticated state-file reads.
 
-Base minus PPO is positive on every seed: **0.2726**, **0.7293**, and **1.2206 BPM**, with mean **0.7409 BPM** and paired subject-block 95% interval **[0.5364, 0.9453] BPM**. Three seeds measure variability; they are not a deployment ensemble. Detailed numerical evidence is in E-001–E-003.
+## Acceptance result
 
-## Transfer status
-
-Official POS and unchanged frozen-controller predictions rescored under the MMPD-specific corrected-GT rule were directly verified on Polaris at the stated host and UTC time. Official POS is **15.8174 BPM** over 300 clips. Causal-controller belief means are Full-face **19.2959**, Oracle-C **4.3396**, DAgger **14.7944**, Standard PPO **14.8840**, and Advantage PPO **14.5870 BPM**. These are transfer diagnostics only and cannot guide MCD training. See E-010, E-011, and E-013.
-
-Official POS and causal-controller rulers are not a smoothing ablation: crop/orchestration, windows, filtering, and HR aggregation differ.
-
-## What is incomplete
-
-- Paired subject-block uncertainty for the MMPD transfer comparisons is missing.
-- Predeclared failure thresholds remain `TBD` and cannot be chosen from MMPD outcomes.
-- Historical full-clip interpolation can look forward when values are missing; impact is unknown. See E-016.
-- The exact legacy DAgger entrypoint is **Unknown**.
+Polaris job `46896` read the first train subject selected by the authenticated split: subject 1020, six clips covering all three cameras and both conditions. Two independent passes produced the same global stream hash. Both emitted exactly 1,031 expected hops and 12,372 valid ROI measurements. This is structural and deterministic evidence only, not an HR-accuracy result. A separate train-wide MCD diagnostic found lower no-fill availability for USBVideo, especially `cheek_upper_right`; it does not authorize imputation. Full values, hashes, and limitations are E-021 through E-023 in the evidence registry.
 
 ## Next action
 
-Implement Gate 2, the MCD manifest/split adapter. Do not train PPO and do not implement the MMPD adapter first. MMPD remains evaluation-only and cannot guide MCD decisions. Detailed evidence remains in E-010–E-013 and E-016; this status is not a second evidence registry.
+Plan Gate 4, the belief tracker and action-legality layer. Do not begin training until Gates 1–6 pass, and do not access MMPD before its frozen evaluation adapter at Gate 8.
+
+## Project references
+
+- [System design](system_design.md)
+- [Data contract](data_contract.md)
+- [Gate 2 adapter](gates/gate_02_mcd_manifest_adapter.md)
+- [Gate 3 causal POS](gates/gate_03_causal_pos.md)
+- [Evidence registry](evidence_registry.md)

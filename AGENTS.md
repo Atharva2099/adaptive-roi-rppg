@@ -43,6 +43,9 @@ Do not run the diagnostic until the comparison is fair and the result that would
 
 - Follow the implementation order and acceptance gates in `docs/system_design.md`. No training is allowed until gates 1-6 pass.
 - Keep the repository small. Production code belongs under `src/`; launchers belong under `scripts/` or `slurm/`.
+- Prefer the smallest clear implementation that satisfies the current gate. Do not add speculative frameworks, duplicate validators, compatibility layers, configuration systems, or production-scale abstractions without a demonstrated current need.
+- Keep tests focused and consolidated. Test research-critical boundaries and observed failures; avoid large collections of repetitive unit tests or tests for impossible internal states.
+- Treat a large line-count increase as a review trigger, not as evidence of completeness. Before adding a new module or helper, check whether the existing code can express the behavior clearly; remove dead or superseded implementation once its evidence is recorded. Never trade away correctness, dataset boundaries, or reproducibility merely to reduce line count.
 - Put temporary work outside the committed project or under an explicitly ignored `temp/` directory. Do not commit generated result trees by default.
 - Keep one-off probes and diagnostics out of production modules. Name temporary scripts for the question they answer.
 - Any implementation derived from a paper must include an inline citation immediately above the relevant code: author, year, title, venue, and section, equation, or algorithm. This includes signal extraction, filters, spectral estimation, window lengths, and paper-derived constants.
