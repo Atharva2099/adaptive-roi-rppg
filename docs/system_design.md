@@ -54,7 +54,7 @@ Schema ownership is in [data_contract.md](data_contract.md).
 - `BeliefState`: HR mean, HR velocity, 2x2 covariance, and hops since confident measurement.
 - `ControllerObservation`: versioned 101-vector for the parity profile plus a named field map; never an unlabelled vector without schema metadata.
 - `ActionDecision`: proposed action, executed action, previous action, hold count before/after, legality, and override reason.
-- `TransitionRecord`: dataset ID as provenance, observation schema, proposed/executed action, pre/post belief, selected measurement, reward components when in training, and provenance IDs. Dataset ID is never an observation field.
+- `ControlTransition`: dataset ID as provenance, observation schema, proposed/executed action, pre/post belief, selected measurement, and signal/control configuration IDs. It has no labels or reward fields; a later training adapter owns those joins.
 - `RunManifest`: immutable input manifests, code commit, dependency versions, configs, seeds, checkpoint hashes, output hashes, and completion state.
 
 ## Historical schema-v3 parity profile
@@ -109,7 +109,7 @@ Fail closed for unknown ROI order, missing fields, hash mismatch, duplicate keys
 
 ## Implementation order and gates
 
-Gate 1 contracts and validators are complete. Gate 2 passed independent review and full-data MCD acceptance on Polaris job `46838`. Gate 3 passed independent review and real train-only MCD structural acceptance on Polaris job `46896`. Gate 4 planning has not started. The implementation order remains fixed:
+Gate 1 contracts and validators are complete. Gate 2 passed independent review and full-data MCD acceptance on Polaris job `46838`. Gate 3 passed independent review and real train-only MCD structural acceptance on Polaris job `46896`. Gate 4 passed independent review and real train-only MCD structural and failure-path acceptance on Polaris job `46927`. The implementation order remains fixed:
 
 1. Contracts and validators.
 2. MCD manifest/split adapter.

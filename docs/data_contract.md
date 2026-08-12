@@ -143,7 +143,9 @@ The legacy Phase-1 NPZ compatibility envelope records exactly `hr_meas`, `conf`,
 
 ## Missing data and causality
 
-Gate 3 currently implements a state-only MCD `CanonicalFrame` reader and the frozen causal POS measurement profile. This implementation is in progress and is not an acceptance result. It does not open labels, use ground truth, or perform fill; the separate causal-fill refinement remains pending.
+Gate 3 implements a state-only MCD `CanonicalFrame` reader and the frozen causal POS measurement profile; its local and train-only Polaris structural acceptance is recorded in the project status. It does not open labels, use ground truth, or perform fill; the separate causal-fill refinement remains pending.
+
+Gate 4 transitions are immutable, dataset-neutral records containing the nonempty measurement-frame provenance ID, pre/post belief, observation, action decision, selected measurement, and bound signal/control configuration IDs. Invalid observation semantics are frozen: HR slots use current belief mean, confidence and PPR are zero, finite coverage is preserved and clipped (otherwise zero), and agreement is zero with `valid=false`. Gate 4 does not establish HR accuracy, policy quality, rewards, or transfer performance; those require later gates.
 
 Full-clip linear interpolation is prohibited in canonical production builds. Past-only fill requires declared `max_fill_age_frames`; until approved, the canonical builder fails on a missing required RGB value rather than guessing. Each filled channel stores `imputation_age_frames` and `imputation_origin_frame_idx`; origin indices are no later than the current `frame_idx` and pair one-to-one with ages. A measurement records the exact inclusive source-frame range and cannot use a frame after its hop timestamp.
 
