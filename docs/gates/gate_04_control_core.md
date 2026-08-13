@@ -2,7 +2,7 @@
 
 ## Purpose and status
 
-Gate 4 adds the small, framework-neutral causal control core used later by the full-face, Oracle, DAgger, and RecurrentPPO adapters. It passed independent SOL review and real train-only MCD structural acceptance on Polaris job `46927`. This gate does not claim HR accuracy, controller quality, rewards, learned-policy quality, full-face/Oracle results, or MMPD transfer.
+Gate 4 adds the small, framework-neutral causal control core used later by the full-face, Oracle, DAgger, and RecurrentPPO adapters. Its unchanged core passed independent SOL review; Polaris job `47260` restored real train-only MCD structural acceptance through the repaired Gate 3 reader. This gate does not claim HR accuracy, controller quality, rewards, learned-policy quality, full-face/Oracle results, or MMPD transfer.
 
 ## Frozen configuration
 
@@ -29,6 +29,8 @@ The smoke requires Slurm metadata, authenticates the Gate 2 bundle, reads only G
 
 Polaris job `46927` completed with exit `0:0` in `11:51` on compute node `lmn01`. All 55 tests passed under Python 3.13.12, NumPy 2.2.0, and SciPy 1.17.1. The accepted CSV has 14 rows: seven clips by two action arms. Each recorded arm represents two matching complete passes. It contains 2,404 controller hops across arm rows, 600 minimum-hold overrides, and 74 selected-invalid transitions; each invalid transition was checked against the exact predict-only belief step. CSV and JSON rows agree exactly.
 
+After the Gate 3 reader repair, Polaris job `47260` reran 65 Linux tests and the same Gate 4 smoke on `lmn01`, completing `0:0` in `14:34` for the combined Gate 3/4 job. It reproduced all 14 rows, 2,404 hops, 600 overrides, 74 selected-invalid transitions, and CSV SHA-256 `f18f981d7cb8b8ba5c1fa8caf5597637765db65f7f26e58d055af9e0349e8a70`, byte-identical to job `46927`. E-025 is the current real-data acceptance authority.
+
 The code snapshot, Slurm wrapper, scheduler capture, logs, CSV, JSON, and sidecar are covered by `final_evidence.sha256`. The snapshot's controller, Gate 4 test, and smoke files were also compared byte-for-byte with the independently reviewed working tree. Exact paths and hashes are in E-024 of the evidence registry.
 
-This is structural, failure-path, and deterministic evidence only. It does not establish HR accuracy, historical numerical parity, action quality, full-face or Oracle values, deployable-policy quality, transfer, or generalization. Gate 5 is next; no training is allowed through Gate 6.
+This is structural, failure-path, and deterministic evidence only. It does not establish HR accuracy, historical numerical parity, action quality, full-face or Oracle values, deployable-policy quality, transfer, or generalization. Gate 5 is accepted separately; Gate 6 historical parity is next. No training is allowed until Gate 6 passes.

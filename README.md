@@ -4,7 +4,7 @@ This project studies whether a lightweight controller can adaptively select sema
 
 ## Current phase
 
-See the [current project status](docs/current_status.md), the [Gate 2 adapter note](docs/gates/gate_02_mcd_manifest_adapter.md), the [Gate 3 causal POS note](docs/gates/gate_03_causal_pos.md), and the [Gate 4 control-core note](docs/gates/gate_04_control_core.md).
+See the [current project status](docs/current_status.md), the [Gate 2 adapter note](docs/gates/gate_02_mcd_manifest_adapter.md), the [Gate 3 causal POS note](docs/gates/gate_03_causal_pos.md), the [Gate 4 control-core note](docs/gates/gate_04_control_core.md), and the [Gate 5 frozen evaluator note](docs/gates/gate_05_frozen_evaluator.md).
 
 ## Research question
 

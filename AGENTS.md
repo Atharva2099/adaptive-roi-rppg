@@ -52,6 +52,7 @@ Do not run the diagnostic until the comparison is fair and the result that would
 - Discuss implications, alternatives, and verification before changing rewards, training loops, preprocessing, evaluation logic, or anything that changes reproducibility.
 - Do not access secrets, credentials, remote systems, datasets, checkpoints, or legacy project material unless the current task explicitly authorizes the exact need.
 - Do not delete or move project material without explicit exact approval. Preserve unrelated edits.
+- Before a new gate changes accepted earlier-gate code, contracts, configuration, or evidence, explicitly flag the compatibility impact, explain the reason and affected evidence/tests, obtain user approval, and rerun the affected acceptance checks. Prefer a consumer-side adapter when the prior contract is sufficient.
 
 ## Before numerics or training
 

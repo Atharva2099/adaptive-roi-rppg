@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import csv
+import hashlib
+import io
 import math
 import os
 import re
 import stat
 from pathlib import Path
 
-from adaptive_roi_rppg.contracts import CanonicalFrame, ROIFrameValue, ROI_NAMES, sha256_file, require_structurally_complete
+from adaptive_roi_rppg.contracts import CanonicalFrame, ROIFrameValue, ROI_NAMES, require_structurally_complete
 from adaptive_roi_rppg.contracts.errors import ContractValidationError
 from .adapter import MCD_DATASET_ID, MCDManifestBundle, MCD_SCHEMA_ID, MCD_STATE_SUFFIX
 from .schema import MCD_STATE_COLUMNS
@@ -43,6 +45,14 @@ def _snapshot(path: Path) -> tuple[int, int, int, int]:
     return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns)
 
 
+def _descriptor_snapshot(fd: int) -> tuple[int, int, int, int]:
+    try:
+        value = os.fstat(fd)
+        if not stat.S_ISREG(value.st_mode): _fail("state file: descriptor is not a regular file")
+    except OSError as exc: raise ContractValidationError("state file: cannot fstat descriptor") from exc
+    return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns)
+
+
 def read_mcd_canonical_frames(bundle: MCDManifestBundle, state_root: str | os.PathLike[str], clip_id: str, required_split: str | None = None) -> tuple[CanonicalFrame, ...]:
     if not isinstance(bundle, MCDManifestBundle): _fail("bundle: must be an MCDManifestBundle")
     if required_split not in (None, "train", "eval"): _fail("required_split: must be train, eval, or null")
@@ -58,19 +68,61 @@ def read_mcd_canonical_frames(bundle: MCDManifestBundle, state_root: str | os.Pa
     expected = f"{clip.clip_id}{MCD_STATE_SUFFIX}"
     path = _path(clip.state_locator, Path(state_root), expected)
     before = _snapshot(path)
-    digest = sha256_file(path)
-    if digest != clip.state_sha256: _fail("state file: SHA-256 mismatch")
     rows: list[list[str]] = []
+    fd = None
+    descriptor_before = None
+    primary_error: BaseException | None = None
     try:
-        with path.open("r", encoding="utf-8", newline="") as handle:
-            reader = csv.reader(handle)
+        nofollow = getattr(os, "O_NOFOLLOW", None)
+        if os.name != "posix" or nofollow is None: _fail("state file: safe descriptor open is unsupported")
+        try:
+            fd = os.open(path, os.O_RDONLY | nofollow)
+            descriptor_before = _descriptor_snapshot(fd)
+            if before != descriptor_before: _fail("state file: opened descriptor does not match initial path")
+            captured = bytearray()
+            while len(captured) < descriptor_before[2]:
+                chunk = os.read(fd, descriptor_before[2] - len(captured))
+                if not chunk: break
+                captured.extend(chunk)
+            descriptor_after = _descriptor_snapshot(fd)
+        except OSError as exc:
+            raise ContractValidationError("state file: cannot capture through descriptor") from exc
+        if len(captured) != descriptor_before[2]: _fail("state file: short read")
+        if descriptor_before != descriptor_after: _fail("state file: descriptor metadata changed during capture")
+        captured_bytes = bytes(captured)
+        digest = hashlib.sha256(captured_bytes).hexdigest()
+        if digest != clip.state_sha256: _fail("state file: SHA-256 mismatch")
+        try:
+            handle = io.StringIO(captured_bytes.decode("utf-8", errors="strict"), newline="")
+            reader = csv.reader(handle, strict=True)
             if tuple(next(reader, ())) != MCD_STATE_COLUMNS: _fail("state CSV: wrong header")
             for row in reader:
                 if len(row) != len(MCD_STATE_COLUMNS): _fail("state CSV: wrong width")
                 rows.append(row)
-    except (OSError, UnicodeError, csv.Error) as exc: raise ContractValidationError("state CSV: cannot parse") from exc
-    after = _snapshot(path)
-    if before != after: _fail("state file: changed during read")
+        except (UnicodeError, csv.Error) as exc: raise ContractValidationError("state CSV: cannot parse captured bytes") from exc
+    except ContractValidationError as exc:
+        primary_error = exc
+    except OSError as exc:
+        primary_error = ContractValidationError("state CSV: cannot parse captured bytes")
+        primary_error.__cause__ = exc
+    except BaseException as exc:
+        primary_error = exc
+    if fd is not None:
+        try:
+            os.close(fd)
+        except OSError as exc:
+            close_error = ContractValidationError("state file: cannot close descriptor")
+            close_error.__cause__ = exc
+            if primary_error is None: primary_error = close_error
+            else: primary_error.add_note(str(close_error))
+    if descriptor_before is not None:
+        try:
+            after = _snapshot(path)
+            if after != descriptor_before: _fail("state file: final path does not match opened descriptor")
+        except ContractValidationError as exc:
+            if primary_error is None: primary_error = exc
+            else: primary_error.add_note(str(exc))
+    if primary_error is not None: raise primary_error
     if len(rows) != clip.state_row_count: _fail("state CSV: row count mismatch")
     result = []
     for expected_idx, row in enumerate(rows):

@@ -10,6 +10,8 @@ MCD is the only training and development dataset. MMPD is evaluation-only for fr
 
 `dataset_id` is provenance on every canonical frame, measurement, label, transition, and result. It is never controller input. The same clip ID may occur in two datasets because identity is `(dataset_id, clip_id)`. Frame indices and timestamps are strictly increasing within a clip. Subject, view, and condition are manifest fields, not ad hoc string splits.
 
+Gate 5 evaluation keys are exact and ordered `(dataset_id, clip_id, hop_idx)`. The authenticated MCD GT adapter emits one `LabelFrame` for every Gate 3 hop; missing, extra, duplicate, nonfinite, or mismatched label/transition keys fail before publication. Ground truth is not part of observations or `ControlTransition`.
+
 The exact ROI order is:
 
 | Index | ROI |

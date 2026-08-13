@@ -1,6 +1,6 @@
 # Gate 3: causal POS implementation (complete)
 
-Gate 3 implements the corrected Wang POS primitive and a frozen, window-causal measurement profile. It passed independent SOL review and real train-only MCD structural acceptance on Polaris job `46896`. The local state reader consumes an already loaded MCD manifest bundle and authenticates only the direct state CSV named by its clip manifest. It has no GT root or GT API.
+Gate 3 implements the corrected Wang POS primitive and a frozen, window-causal measurement profile. After a same-inode content-substitution issue was found, the state reader was repaired to capture one immutable byte stream from one no-follow descriptor and use those exact bytes for both SHA-256 verification and CSV parsing. SOL independently reviewed the repair, and Polaris job `47260` reaccepted it without changing stable numerical output. The reader has no GT root or GT API.
 
 The profile uses NumPy and SciPy: Wang POS uses a `ceil(1.6 * fps)` rolling window, literal paper normalization `window / means`, the corrected combination `S0 + std(S0)/std(S1)*S1`, the projection `[[0,1,-1],[-2,1,1]]`, population standard deviation, and overlap-add without overlap-count division. Each one-second hop uses a trailing eight-second window. POS postprocessing is Butterworth BA order 1 over 0.75–3 Hz, and HR processing is Butterworth BA order 3 over 0.5–3 Hz. Both use `scipy.signal.lfilter` with an independent zero initial state for each ROI and hop. Periodograms use Hann, constant detrending, one-sided density, HR NFFT `max(4096,nextpow2(n))`, and natural-N PPR numerator. The frequency mask is inclusive and ties choose the first ascending bin. No filters or PSDs are reimplemented in tests.
 
@@ -8,7 +8,9 @@ The final legal Wang subwindow is included: for `n=L+1`, starts `0` and `1` both
 
 The 45 local and Linux checks cover the bare primitive, malformed and degenerate inputs, hop/source boundaries, clip identity and reset behavior, missing RGB, canonical pose serialization, configuration identity, and state-file authentication boundaries. The reader hash, row, token, split, and changed-read claims are backed by the consolidated tests. The `1e-8` threshold is fail-closed for channel means, projection denominator standard deviation, POS postfilter standard deviation, spectral filter standard deviation, and natural in-band total power; Gate 6 must quantify any discrepancy from legacy magnitude behavior.
 
-## Accepted real-MCD smoke
+## Accepted real-MCD smoke and reacceptance
+
+Polaris job `47260` completed `0:0` in `14:34` on `lmn01` with 65 Linux tests. It reproduced the six-clip cohort, 1,031 hops, 12,372 valid ROI measurements, global stream hash `a8996552fd0b61e7338a15a255d8e2acdd3b0da606a853f995c74ed11056c367`, and CSV SHA-256 `bcbcf8b7c87e81daf79adf2d6f458ec5a3359f2ea2d1621a08a507ec3ab03c9b`. The CSV is byte-identical to the historical job below. E-025 is the current acceptance authority.
 
 - Polaris job `46896` completed with exit `0:0` in 3 minutes on `lmn02`.
 - Environment: Python 3.13.12, NumPy 2.2.0, SciPy 1.17.1.
@@ -22,7 +24,7 @@ The 45 local and Linux checks cover the bare primitive, malformed and degenerate
 
 A separate train-wide missingness diagnostic, E-021, found that no-fill measurement availability is lower for USBVideo and especially `cheek_upper_right`. This is a recorded limitation, not approval to choose a fill rule.
 
-Gate 3 establishes implementation conformance, synthetic known-answer behavior, authenticated train-only data access, exact timing, and deterministic structure. It does not establish real-MCD HR accuracy, historical parity, controller quality, transfer, or generalization. The six accepted smoke clips happened to have valid measurements at every hop and therefore do not exercise real missing-data failure behavior. No historical code was copied or imported, and no historical repository is a dependency.
+Gate 3 establishes implementation conformance, synthetic known-answer behavior, authenticated train-only data access, exact timing, and deterministic structure. It does not establish real-MCD HR accuracy, historical parity, controller quality, transfer, or generalization. The six smoke clips had valid measurements at every hop and therefore do not exercise real missing-data failure behavior. No historical code was copied or imported, and no historical repository is a dependency.
 
 Slurm smoke command:
 

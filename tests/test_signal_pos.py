@@ -1,11 +1,13 @@
 import ast
 import csv
 import hashlib
+import io
 import math
 import os
 import subprocess
 import tempfile
 import unittest
+from contextlib import nullcontext
 from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
@@ -15,7 +17,7 @@ from scipy.signal import periodogram
 
 import adaptive_roi_rppg.signal.pos as pos
 import adaptive_roi_rppg.data.mcd.frames as frame_reader
-from adaptive_roi_rppg.contracts import (CanonicalFrame, ClipManifest, DatasetManifest, ManifestStatus, OverlapResult, ROIFrameValue, ROI_NAMES, SplitManifest, canonical_json_bytes, sha256_file)
+from adaptive_roi_rppg.contracts import (CanonicalFrame, ClipManifest, DatasetManifest, ManifestStatus, OverlapResult, ROIFrameValue, ROI_NAMES, SplitManifest, canonical_json_bytes)
 from adaptive_roi_rppg.contracts.errors import ContractValidationError
 from adaptive_roi_rppg.data.mcd import MCDManifestBundle, MCD_SCHEMA_ID, MCD_STATE_COLUMNS, read_mcd_canonical_frames
 from adaptive_roi_rppg.signal import POS_CONFIG_ID, POS_CONFIG_PAYLOAD, build_pos_measurements, wang_pos
@@ -47,6 +49,18 @@ def state_row(index, *, absent=False, bad=""):
     return row
 
 
+def reader_fixture(root, payload=None, row_count=2):
+    state = root / "state"; state.mkdir()
+    clip_id = "S1_FullHDwebcam_before"; path = state / f"{clip_id}_semantic_state_vectors.csv"
+    if payload is None:
+        text = io.StringIO(newline=""); writer = csv.writer(text); writer.writerow(MCD_STATE_COLUMNS); writer.writerows([state_row(0), state_row(1, absent=True)]); payload = text.getvalue().encode("utf-8")
+    path.write_bytes(payload)
+    clip = ClipManifest("mcd", clip_id, "clip-manifest", "S1", "Frontal", "before", "FullHDwebcam", 30.0, f"state/{path.name}", hashlib.sha256(payload).hexdigest(), row_count, None, None, None, "split", MCD_SCHEMA_ID, ManifestStatus.complete)
+    split = SplitManifest("split", "mcd", ("S1",), (), (clip_id,), (), 1, 0, 1, 0, OverlapResult.zero, ("0" * 64,), ManifestStatus.complete)
+    dataset = DatasetManifest("dataset", "mcd", MCD_SCHEMA_ID, (clip.clip_manifest_id,), ("0" * 64,), {"source_inventory_id": "inventory"}, 1, 1, "0" * 64, (), "2026-08-11T00:00:00Z", "test", ManifestStatus.complete)
+    return state, path, MCDManifestBundle({"inventory_id": "inventory"}, split, (clip,), dataset), clip_id
+
+
 class Gate3Tests(unittest.TestCase):
     def test_literal_wang_plus_sign_and_final_legal_window(self):
         rgb = np.array([[1, 2, 3], [2, 4, 6], [3, 2, 1], [4, 5, 2]], dtype=float)
@@ -65,7 +79,12 @@ class Gate3Tests(unittest.TestCase):
 
     def test_synthetic_tone_measurement_at_both_production_fps(self):
         for fps in (24.0, 30.0):
-            frame = build_pos_measurements(make_frames(round(8 * fps), fps, tone=True))[0].measurements[0]
+            stable = make_frames(round(8 * fps), fps, tone=True)
+            first = build_pos_measurements(stable)
+            second = build_pos_measurements(stable)
+            self.assertEqual(first, second)
+            self.assertEqual(canonical_json_bytes([frame.to_dict() for frame in first]), canonical_json_bytes([frame.to_dict() for frame in second]))
+            frame = first[0].measurements[0]
             self.assertTrue(frame.valid)
             self.assertLessEqual(abs(frame.hr_bpm - 72.0703125), .3515625 if fps == 24 else .439453125)
 
@@ -123,13 +142,7 @@ class Gate3Tests(unittest.TestCase):
 
     def test_reader_state_only_success_and_guards(self):
         with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp); state = root / "state"; state.mkdir(); path = state / "S1_FullHDwebcam_before_semantic_state_vectors.csv"
-            with path.open("w", newline="", encoding="utf-8") as handle:
-                writer = csv.writer(handle); writer.writerow(MCD_STATE_COLUMNS); writer.writerows([state_row(0), state_row(1, absent=True)])
-            digest = sha256_file(path); clip_id = "S1_FullHDwebcam_before"; clip = ClipManifest("mcd", clip_id, "clip-manifest", "S1", "Frontal", "before", "FullHDwebcam", 30.0, f"state/{path.name}", digest, 2, None, None, None, "split", MCD_SCHEMA_ID, ManifestStatus.complete)
-            split = SplitManifest("split", "mcd", ("S1",), (), (clip_id,), (), 1, 0, 1, 0, OverlapResult.zero, ("0" * 64,), ManifestStatus.complete)
-            dataset = DatasetManifest("dataset", "mcd", MCD_SCHEMA_ID, (clip.clip_manifest_id,), ("0" * 64,), {"source_inventory_id": "inventory"}, 1, 1, "0" * 64, (), "2026-08-11T00:00:00Z", "test", ManifestStatus.complete)
-            bundle = MCDManifestBundle({"inventory_id": "inventory"}, split, (clip,), dataset)
+            state, path, bundle, clip_id = reader_fixture(Path(temp)); dataset = bundle.dataset_manifest; clip = bundle.clip_manifests[0]
             original_open = Path.open
             def guard_ground_truth(path, *args, **kwargs):
                 if path.name.endswith("_ground_truth.csv"):
@@ -138,6 +151,9 @@ class Gate3Tests(unittest.TestCase):
             with patch.object(Path, "open", guard_ground_truth):
                 frames = read_mcd_canonical_frames(bundle, state, clip_id, "train")
             self.assertEqual(len(frames), 2); self.assertEqual(frames[0].head_yaw_deg, None); self.assertEqual(frames[1].roi_values[0].invalid_reason, "source_missing")
+            frames_again = read_mcd_canonical_frames(bundle, state, clip_id, "train")
+            self.assertEqual(frames, frames_again)
+            self.assertEqual(canonical_json_bytes([frame.to_dict() for frame in frames]), canonical_json_bytes([frame.to_dict() for frame in frames_again]))
             with self.assertRaises(ContractValidationError): read_mcd_canonical_frames(replace(bundle, dataset_manifest=replace(dataset, dataset_id="other")), state, clip_id)
             with self.assertRaises(ContractValidationError): read_mcd_canonical_frames(replace(bundle, dataset_manifest=replace(dataset, clip_manifest_refs=())), state, clip_id)
             with self.assertRaises(ContractValidationError): read_mcd_canonical_frames(replace(bundle, clip_manifests=(replace(clip, state_row_count=0),)), state, clip_id)
@@ -145,8 +161,128 @@ class Gate3Tests(unittest.TestCase):
             snapshot = frame_reader._snapshot(path)
             with patch.object(frame_reader, "_snapshot", side_effect=[snapshot, (snapshot[0], snapshot[1], snapshot[2] + 1, snapshot[3])]):
                 with self.assertRaises(ContractValidationError): read_mcd_canonical_frames(bundle, state, clip_id)
+            original_open = frame_reader.os.open
+            original_mtime = path.stat().st_mtime_ns
+            original_bytes = path.read_bytes()
+            altered_bytes = original_bytes.replace(b"1.0,1.0,1.0,1.0,1.0", b"9.0,1.0,1.0,1.0,1.0", 1)
+            self.assertEqual(len(original_bytes), len(altered_bytes))
+            def alter_after_open(open_path, flags, mode=0o777):
+                descriptor = original_open(open_path, flags, mode)
+                if open_path == path:
+                    writer = original_open(path, os.O_WRONLY)
+                    try:
+                        os.write(writer, altered_bytes)
+                    finally:
+                        os.close(writer)
+                    os.utime(path, ns=(original_mtime, original_mtime))
+                return descriptor
+            with patch.object(frame_reader.os, "open", side_effect=alter_after_open):
+                with self.assertRaisesRegex(ContractValidationError, "SHA-256 mismatch"):
+                    read_mcd_canonical_frames(bundle, state, clip_id)
+            path.write_bytes(original_bytes); os.utime(path, ns=(original_mtime, original_mtime))
+            with patch.object(frame_reader.os, "read", return_value=b""):
+                with self.assertRaisesRegex(ContractValidationError, "short read"):
+                    read_mcd_canonical_frames(bundle, state, clip_id)
+            descriptor_snapshot = frame_reader._descriptor_snapshot
+            descriptor_calls = 0
+            def change_descriptor_metadata(fd):
+                nonlocal descriptor_calls
+                value = descriptor_snapshot(fd)
+                descriptor_calls += 1
+                return value if descriptor_calls == 1 else (value[0], value[1], value[2] + 1, value[3])
+            with patch.object(frame_reader, "_descriptor_snapshot", side_effect=change_descriptor_metadata):
+                with self.assertRaisesRegex(ContractValidationError, "metadata changed"):
+                    read_mcd_canonical_frames(bundle, state, clip_id)
+            replacement = state / "replacement.csv"
+            replacement.write_bytes(original_bytes)
+            path.unlink()
+            path.symlink_to(replacement)
+            with self.assertRaises(ContractValidationError): read_mcd_canonical_frames(bundle, state, clip_id)
+            path.unlink()
+            path.write_bytes(original_bytes)
             path.write_text(path.read_text().replace("1.0,1.0,1.0,1.0,1.0", "nan,1.0,1.0,1.0,1.0", 1), encoding="utf-8")
             with self.assertRaises(ContractValidationError): read_mcd_canonical_frames(bundle, state, clip_id)
+
+    def test_reader_single_frozen_bytes_and_authenticated_parse_failures(self):
+        with tempfile.TemporaryDirectory() as temp:
+            state, _, bundle, clip_id = reader_fixture(Path(temp))
+            real_sha256 = hashlib.sha256; real_string_io = io.StringIO; hashed = []; decoded = []
+            def checked_hash(value):
+                self.assertIs(type(value), bytes); hashed.append(value); return real_sha256(value)
+            def checked_string_io(value, *args, **kwargs):
+                decoded.append(value); return real_string_io(value, *args, **kwargs)
+            with patch.object(frame_reader.hashlib, "sha256", side_effect=checked_hash), patch.object(frame_reader.io, "StringIO", side_effect=checked_string_io):
+                read_mcd_canonical_frames(bundle, state, clip_id)
+            self.assertEqual(decoded, [hashed[0].decode("utf-8", errors="strict")])
+        for payload in (b"\xff", (",".join(MCD_STATE_COLUMNS) + '\n"unterminated\n').encode("utf-8")):
+            with self.subTest(payload=payload[:12]), tempfile.TemporaryDirectory() as temp:
+                state, _, bundle, clip_id = reader_fixture(Path(temp), payload, 1)
+                with self.assertRaisesRegex(ContractValidationError, "cannot parse captured bytes"):
+                    read_mcd_canonical_frames(bundle, state, clip_id)
+
+    def test_reader_descriptor_path_binding_and_primary_error_precedence(self):
+        with tempfile.TemporaryDirectory() as temp:
+            state, path, bundle, clip_id = reader_fixture(Path(temp)); original = path.read_bytes(); real_open = os.open
+            held = state / "held.csv"; replacement = state / "replacement.csv"; replacement.write_bytes(original)
+            def open_equal_content_replacement(open_path, flags, mode=0o777):
+                os.replace(path, held); os.replace(replacement, path)
+                descriptor = real_open(open_path, flags, mode)
+                os.replace(path, replacement); os.replace(held, path)
+                return descriptor
+            with patch.object(frame_reader.os, "open", side_effect=open_equal_content_replacement):
+                with self.assertRaisesRegex(ContractValidationError, "opened descriptor does not match initial path"):
+                    read_mcd_canonical_frames(bundle, state, clip_id)
+        with tempfile.TemporaryDirectory() as temp:
+            state, path, bundle, clip_id = reader_fixture(Path(temp)); replacement = state / "replacement.csv"; replacement.write_bytes(path.read_bytes()); real_sha256 = hashlib.sha256
+            def replace_path_after_capture(value): os.replace(replacement, path); return real_sha256(value)
+            with patch.object(frame_reader.hashlib, "sha256", side_effect=replace_path_after_capture):
+                with self.assertRaisesRegex(ContractValidationError, "final path does not match opened descriptor"):
+                    read_mcd_canonical_frames(bundle, state, clip_id)
+        with tempfile.TemporaryDirectory() as temp:
+            state, path, bundle, clip_id = reader_fixture(Path(temp)); real_close = os.close
+            def close_then_fail(fd): real_close(fd); raise OSError("close failed")
+            with patch.object(frame_reader.os, "read", return_value=b""), patch.object(frame_reader.os, "close", side_effect=close_then_fail):
+                with self.assertRaisesRegex(ContractValidationError, "short read"):
+                    read_mcd_canonical_frames(bundle, state, clip_id)
+        with tempfile.TemporaryDirectory() as temp:
+            state, path, bundle, clip_id = reader_fixture(Path(temp)); real_sha256 = hashlib.sha256
+            def unlink_then_hash(value): path.unlink(); return real_sha256(b"wrong")
+            with patch.object(frame_reader.hashlib, "sha256", side_effect=unlink_then_hash):
+                with self.assertRaisesRegex(ContractValidationError, "SHA-256 mismatch"):
+                    read_mcd_canonical_frames(bundle, state, clip_id)
+
+    def test_reader_real_size_changes_and_close_once(self):
+        for operation in ("grow", "truncate"):
+            with self.subTest(operation=operation), tempfile.TemporaryDirectory() as temp:
+                state, path, bundle, clip_id = reader_fixture(Path(temp)); real_read = os.read; changed = False
+                def change_size(fd, count):
+                    nonlocal changed
+                    if not changed:
+                        changed = True
+                        if operation == "grow":
+                            with path.open("ab") as writer: writer.write(b"x")
+                        else:
+                            with path.open("r+b") as writer: writer.truncate(max(0, path.stat().st_size - 1))
+                    return real_read(fd, count)
+                with patch.object(frame_reader.os, "read", side_effect=change_size):
+                    with self.assertRaisesRegex(ContractValidationError, "short read|metadata changed"):
+                        read_mcd_canonical_frames(bundle, state, clip_id)
+        scenarios = ("success", "hash", "utf8", "csv", "short", "stat")
+        for scenario in scenarios:
+            with self.subTest(scenario=scenario), tempfile.TemporaryDirectory() as temp:
+                payload = b"\xff" if scenario == "utf8" else ((",".join(MCD_STATE_COLUMNS) + '\n"unterminated\n').encode() if scenario == "csv" else None)
+                state, _, bundle, clip_id = reader_fixture(Path(temp), payload, 1 if payload else 2); real_close = os.close; closes = []
+                def counted_close(fd): closes.append(fd); real_close(fd)
+                patches = [patch.object(frame_reader.os, "close", side_effect=counted_close)]
+                if scenario == "hash": bundle = replace(bundle, clip_manifests=(replace(bundle.clip_manifests[0], state_sha256="0" * 64),))
+                if scenario == "short": patches.append(patch.object(frame_reader.os, "read", return_value=b""))
+                if scenario == "stat": patches.append(patch.object(frame_reader, "_descriptor_snapshot", side_effect=[frame_reader._snapshot(state / f"{clip_id}_semantic_state_vectors.csv"), ContractValidationError("state file: cannot fstat descriptor")]))
+                with patches[0]:
+                    with patches[1] if len(patches) > 1 else nullcontext():
+                        if scenario == "success": read_mcd_canonical_frames(bundle, state, clip_id)
+                        else:
+                            with self.assertRaises(ContractValidationError): read_mcd_canonical_frames(bundle, state, clip_id)
+                self.assertEqual(len(closes), 1)
 
     def test_reader_changed_read_and_no_gt_path(self):
         source = Path(__file__).parents[1] / "src" / "adaptive_roi_rppg" / "data" / "mcd" / "frames.py"
