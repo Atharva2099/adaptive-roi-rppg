@@ -9,7 +9,7 @@
 | 3. Causal signal builder with synthetic numeric tests | Complete: repaired, SOL-reviewed, and reaccepted on Polaris job `47260` |
 | 4. Belief tracker and action legality | Complete: core unchanged and real-data acceptance restored on Polaris job `47260` |
 | 5. Frozen evaluator and row-level outputs | Complete: accepted on Polaris job `47300` with reproducible immutable outputs |
-| 6. Historical parity replay on a small MCD fixture, then full MCD parity | Next: approved MCD-only parity work |
+| 6. Historical parity replay on a small MCD fixture, then full MCD parity | Complete: SOL-reviewed and accepted on Polaris job `47313` |
 | 7. MCD-only training adapters | Blocked by gate order |
 | 8. MMPD frozen-evaluation adapter last | Blocked by gate order |
 
@@ -33,9 +33,9 @@ Gate 4 adds immutable belief/control records, the literal predict-then-update 2x
 
 The Gate 4 core was unchanged. Job `47260` reran its seven train clips and two action arms through the repaired reader, reproducing 2,404 hops, 600 minimum-hold overrides, 74 selected-invalid transitions, and a CSV byte-identical to E-024. E-025 restores its real-data acceptance.
 
-## Next action
+## Gate 6 acceptance
 
-Proceed to Gate 6: historical parity replay on a small MCD fixture, followed by the predeclared full-MCD parity work if the Gate 6 decision rule passes. Training remains prohibited until Gate 6 passes, and MMPD remains evaluation-only and unavailable for training or development decisions.
+The exact 12-clip fixture passed on Polaris job `47311` with 2,063 joined hops and zero unclassified rows. The full 533-clip/89-subject MCD replay passed on job `47313` in `2:04:28` on `lmn01`, with 91,227 joined hops and zero unclassified rows. Historical equal-clip MAE was `12.386529570502146` BPM and current equal-clip MAE was `12.631680651991282` BPM. This is observational ruler-difference evidence only. See [the Gate 6 note](gates/gate_06_historical_parity.md). Gate 7 MCD-only training adapter work may now begin under the existing MMPD boundary.
 
 ## Project references
 
@@ -45,4 +45,5 @@ Proceed to Gate 6: historical parity replay on a small MCD fixture, followed by 
 - [Gate 3 causal POS](gates/gate_03_causal_pos.md)
 - [Gate 4 control core](gates/gate_04_control_core.md)
 - [Gate 5 frozen evaluator](gates/gate_05_frozen_evaluator.md)
+- [Gate 6 historical parity](gates/gate_06_historical_parity.md)
 - [Evidence registry](evidence_registry.md)

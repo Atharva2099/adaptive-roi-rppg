@@ -124,7 +124,7 @@ def _read_descriptor(path: Path, expected_count: int) -> tuple[np.ndarray, str]:
     return np.asarray(values, dtype=np.float64), digest
 
 
-def _gt_path(bundle: MCDManifestBundle, gt_root: str | os.PathLike[str], clip_id: str):
+def _gt_path(bundle: MCDManifestBundle, gt_root: str | os.PathLike[str], clip_id: str, required_split: str = "train"):
     if not isinstance(bundle, MCDManifestBundle): _fail("bundle must be an MCDManifestBundle")
     require_structurally_complete(bundle.split_manifest); require_structurally_complete(bundle.dataset_manifest)
     canonical = {c.clip_id: c for c in bundle.clip_manifests}
@@ -137,8 +137,11 @@ def _gt_path(bundle: MCDManifestBundle, gt_root: str | os.PathLike[str], clip_id
     if references.get(clip.clip_manifest_id) != expected_hash: _fail("clip is not an exact dataset-manifest reference")
     if clip.dataset_id != MCD_DATASET_ID or clip.schema_id != MCD_SCHEMA_ID or clip.gt_locator != f"gt/{clip_id}{MCD_GT_SUFFIX}" or clip.gt_sha256 is None or clip.gt_row_count is None or clip.gt_row_count != clip.state_row_count:
         _fail("clip GT manifest identity is invalid")
-    if clip.split_id != bundle.split_manifest.split_id or clip_id not in bundle.split_manifest.train_clip_ids:
-        _fail("clip must belong to the train split")
+    if required_split not in ("train", "eval"):
+        _fail("required_split must be train or eval")
+    allowed = bundle.split_manifest.train_clip_ids if required_split == "train" else bundle.split_manifest.eval_clip_ids
+    if clip.split_id != bundle.split_manifest.split_id or clip_id not in allowed:
+        _fail(f"clip must belong to the {required_split} split")
     root = Path(gt_root)
     if root.is_symlink() or not root.is_dir(): _fail("gt_root must be a real directory")
     path = root / f"{clip_id}{MCD_GT_SUFFIX}"
@@ -175,7 +178,7 @@ def _label(signal: np.ndarray, fps: float, end: int, hop: int) -> tuple[float | 
 
 def read_mcd_labels(bundle: MCDManifestBundle, gt_root: str | os.PathLike[str], clip_id: str, required_split: str = "train", clip_manifest: ClipManifest | None = None) -> tuple[LabelFrame, ...]:
     if required_split != "train": _fail("required_split must be train for Gate 5")
-    clip, path = _gt_path(bundle, gt_root, clip_id)
+    clip, path = _gt_path(bundle, gt_root, clip_id, "train")
     if clip_manifest is not None and (not isinstance(clip_manifest, ClipManifest) or clip_manifest != clip): _fail("supplied clip is not the exact canonical bundle clip")
     values, digest = _read_gt(path, clip.gt_row_count)
     if digest != clip.gt_sha256: _fail("GT SHA-256 mismatch")
@@ -188,4 +191,19 @@ def read_mcd_labels(bundle: MCDManifestBundle, gt_root: str | os.PathLike[str], 
     return tuple(frames)
 
 
-__all__ = ["GT_RULE_ID", "GT_RULE_PAYLOAD", "GT_RULE_PAYLOAD_SHA256", "read_mcd_labels"]
+def read_mcd_eval_labels(bundle: MCDManifestBundle, gt_root: str | os.PathLike[str], clip_id: str, clip_manifest: ClipManifest | None = None) -> tuple[LabelFrame, ...]:
+    """Read the authenticated MCD test90 labels for the separate Gate 6 consumer."""
+    clip, path = _gt_path(bundle, gt_root, clip_id, "eval")
+    if clip_manifest is not None and (not isinstance(clip_manifest, ClipManifest) or clip_manifest != clip): _fail("supplied clip is not the exact canonical bundle clip")
+    values, digest = _read_gt(path, clip.gt_row_count)
+    if digest != clip.gt_sha256: _fail("GT SHA-256 mismatch")
+    if clip.camera_fps not in (24.0, 30.0): _fail("camera FPS must be exactly 24 or 30")
+    fps = float(clip.camera_fps); window = round(8 * fps); hop = round(1 * fps)
+    frames = []
+    for hop_idx, end in enumerate(range(window, len(values) + 1, hop)):
+        hr, valid, reason = _label(values, fps, end, hop_idx)
+        frames.append(LabelFrame(clip.dataset_id, clip.clip_id, hop_idx, end / fps, hr, GT_RULE_ID, valid, reason))
+    return tuple(frames)
+
+
+__all__ = ["GT_RULE_ID", "GT_RULE_PAYLOAD", "GT_RULE_PAYLOAD_SHA256", "read_mcd_labels", "read_mcd_eval_labels"]
