@@ -1,4 +1,4 @@
-# Current status — 2026-08-14
+# Current status — 2026-08-15
 
 ## Gate tracker
 
@@ -11,7 +11,7 @@
 | 5. Frozen evaluator and row-level outputs | Complete: accepted on Polaris job `47300` with reproducible immutable outputs |
 | 6. Historical parity replay on a small MCD fixture, then full MCD parity | Complete: SOL-reviewed and accepted on Polaris job `47313` |
 | 7. MCD-only training adapters | Complete for the frozen MCD Oracle B/C teacher diagnostic; no deployable model result is claimed |
-| 8. Frozen MCD evaluation of existing RecurrentPPO checkpoints | INCOMPLETE / NO-GO: not accepted; no model result and no Polaris fixture/full evaluation allowed |
+| 8. Frozen MCD evaluation of existing RecurrentPPO checkpoints | Complete: accepted MCD-only result on Polaris job `47417`; no retraining or MMPD access |
 
 Gate 2 passed independent SOL review and full-data acceptance on Polaris job `46838`. Gate 3's state reader was repaired so one immutable byte capture is both hashed and parsed, then independently SOL-reviewed and reaccepted on Polaris job `47260`. Gate 4 core was unchanged; job `47260` restored its real-data acceptance through the repaired reader. Gate 5 is now accepted on job `47300`. No training or MMPD access is authorized.
 
@@ -41,7 +41,7 @@ The exact 12-clip fixture passed on Polaris job `47311` with 2,063 joined hops a
 
 Gate 7 is accepted for the frozen MCD-train Oracle B/C teacher diagnostic on Polaris job `47411`, which completed with exit `0` in `01:35:35` on `lmn01`. The merged output is `/Users/924254653/adaptive_roi_gate7_oracle_runs_20260814_r2/full-47411/merged`; all 16 shards completed, `COMPLETE.json` exists, and no `FAILED.json` exists. The eligible cohort is 3,057 clips from 510 subjects and contains 523,610 hops. Oracle B (`greedy_b`) has clip-equal MAE `3.8833134521974753` BPM and 222,613 switches; Oracle C (`beam_c`) has clip-equal MAE `2.5482841213115375` BPM and 204,798 switches; `dCB = B-C = 1.3350293308859372` BPM. These are current MCD-train teacher diagnostics, not deployable model scores, and are not directly comparable to legacy test90 or cache values. Fixture job `47404` remains successful engineering evidence only. Jobs `47405` and `47406` failed before evaluation and remain historical launcher failures. Job `47407` remains `SUPERSEDED`/`INCOMPLETE`: shards 0–14 used the old v2/3,060-clip plan, shard 15 rejected the three 7412 clips, and no merge or final result exists. Those shards cannot be reused because the v3 plan payload changes.
 
-Gate 8 history is recorded in [the Gate 8 note](gates/gate_08_mcd_frozen_models.md). Sol approved frozen MCD evaluation of nine existing RecurrentPPO checkpoints over 533 valid clips and 89 represented subjects, with no retraining and no MMPD. Terra's checkpoint-load smoke and later local repairs passed their reported local tests, but no Polaris evaluation ran. Sol reviews remained `NO-GO`: the final production runner still does not use strict publication helpers, strict ownership is not proven in production, final report and manifest rebuilds are missing, checkpoint identity can be erased by aggregation, production publish/merge paths are not directly tested, and the manifest references the legacy `RL for RoI` checkout. Gate 8 is not accepted and no model number or completion claim is made.
+Gate 8 is accepted for the frozen MCD model evaluation on Polaris job `47417`. The final report covers 533 clips, 89 subjects, 91,227 hops per method, full-face plus nine frozen checkpoints, and 10,000 subject-bootstrap replicates. Full-face equal-clip MAE is `12.631680651997897` BPM; the family means are DAgger `8.471633637516538`, Standard PPO `7.991317152305402`, and Advantage PPO `7.623211434460554` BPM. The merged artifacts and hashes are recorded as E-031 and in [the Gate 8 note](gates/gate_08_mcd_frozen_models.md). Jobs `47415` and `47416` are successful repeat preflights. Failed job `47412` is preserved as a serialization repair record: invalid selected measurements had blank confidence/PPR fields, which were made nullable only for invalid rows. This result is MCD-only; it does not authorize retraining or make an MMPD transfer claim.
 
 ## Project references
 
@@ -52,4 +52,7 @@ Gate 8 history is recorded in [the Gate 8 note](gates/gate_08_mcd_frozen_models.
 - [Gate 4 control core](gates/gate_04_control_core.md)
 - [Gate 5 frozen evaluator](gates/gate_05_frozen_evaluator.md)
 - [Gate 6 historical parity](gates/gate_06_historical_parity.md)
+- [Gate 7 MCD Oracle B/C](gates/gate_07_mcd_oracles.md)
+- [Gate 8 frozen MCD models](gates/gate_08_mcd_frozen_models.md)
+- [Evidence registry with artifact hashes](evidence_registry.md)
 - [Evidence registry](evidence_registry.md)

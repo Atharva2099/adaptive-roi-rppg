@@ -1,100 +1,82 @@
 # Gate 8: frozen MCD model evaluation
 
-Status: `INCOMPLETE` / `NO-GO`. Gate 8 is not accepted. No model result, model-quality claim, or completion claim is recorded. No retraining was authorized, no MMPD material was used, and no Polaris fixture or full evaluation may run until the final Sol findings are repaired and reviewed.
+Status: `ACCEPTED` for the frozen MCD evaluation only. No retraining was run, no MMPD data was accessed, and no transfer or deployment claim follows from this gate.
 
-## Approved scope
+## Frozen protocol
 
-The approved plan was a frozen MCD evaluation of nine existing `RecurrentPPO` checkpoint files: three DAgger checkpoints, three Standard-PPO checkpoints, and three Advantage-PPO checkpoints. The planned cohort is 533 valid evaluation clips representing 89 subjects. The plan allows no retraining and no MMPD access. It requires row-level outputs, behavior information, provenance, deterministic shard ownership, and independently rebuilt publication artifacts.
+- MCD evaluation split: 540 original clips, exactly 7 excluded invalid clips, 533 clips and 89 subjects retained.
+- Each method has 91,227 valid hops. Metric: equal-clip mean absolute HR error in BPM.
+- Arms: full-face action 0 plus nine existing RecurrentPPO checkpoints: three DAgger, three Standard PPO, and three Advantage PPO.
+- Bootstrap: 10,000 subject resamples; the report records separate equal-clip and equal-subject estimates and fixed comparison seeds.
+- Runtime: committed active repository snapshot, external checkpoint package, Polaris CPU Slurm job. The legacy repository supplied the read-only historical comparison only.
 
-## Evaluation history
+## Final result: 2026-08-15 UTC
 
-All timestamps below are `2026-08-14 UTC` because exact times were not retained in the handoff.
+Polaris job `47417` completed with exit `0` in `05:44:25` on `lmn01`. The run used 16 subject-disjoint shards, independently replayed each shard and the full source set during merge, rebuilt the CSV aggregates, and wrote `COMPLETE.json` last.
 
-### Sol approved plan — `2026-08-14 UTC`
+| Method | Equal-clip MAE (BPM) |
+|---|---:|
+| Full face | 12.6317 |
+| DAgger seed 0 / 1 / 2 | 7.8607 / 8.4257 / 9.1284 |
+| DAgger seed mean | 8.4716 |
+| Standard PPO seed 0 / 1 / 2 | 7.8946 / 7.9689 / 8.1105 |
+| Standard PPO seed mean | 7.9913 |
+| Advantage PPO seed 0 / 1 / 2 | 7.6375 / 7.5007 / 7.7315 |
+| Advantage PPO seed mean | 7.6232 |
 
-Sol approved the frozen MCD-only evaluation plan described above. The intended output was an auditable comparison of the existing checkpoint files, not a new training result. The MMPD evaluation-only boundary remained unchanged.
+All nine frozen models scored below the new full-face baseline. Family means are averages across independent seeds, not ensembles.
 
-### Terra first implementation — `2026-08-14 UTC`
+## Historical comparison
 
-Terra verified that all nine checkpoint files were present on Polaris and CPU-loaded successfully. The inspected models had a 101-value float32 observation, 12 actions, and a recurrent 128-unit LSTM. Terra reported a local focused test result of 6/6 and a passing full suite. No Polaris evaluation run was started.
+The legacy values use the legacy causal replay and the same 533-clip names/checkpoint identities where available. They are a reference, not a matched pipeline ablation.
 
-This established checkpoint loading and basic interface evidence only. It did not establish model-training provenance, shard correctness, publication correctness, or an evaluation result.
+| Method | Historical legacy | New Gate 8 | New minus historical |
+|---|---:|---:|---:|
+| Full face | 12.3865 | 12.6317 | +0.2452 |
+| DAgger seed mean | 8.1157 | 8.4716 | +0.3559 |
+| Advantage PPO seed mean | 7.3748 | 7.6232 | +0.2484 |
 
-### First Sol review — `NO-GO`, `2026-08-14 UTC`
+The difference is consistent with the documented pipeline changes: current POS reconstruction, invalid-hop handling, ground-truth handling, and tie-breaking are not identical to the legacy evaluator. See [the legacy map](../legacy_project_map.md) and evidence IDs E-001–E-004 and E-031.
 
-Sol found these issues:
+## Reproducible artifacts
 
-- The launcher `RUN` path did not propagate correctly. This could make the requested production execution differ from the tested path.
-- Standard-PPO training provenance remained unresolved. A family name and checkpoint file are not enough to authenticate how the checkpoint was trained.
-- The report and behavior outputs were incomplete. The planned evidence could not fully explain what each checkpoint did.
-- The bootstrap estimand did not match the stated analysis. A confidence interval is not useful if its sampling unit and reported quantity differ.
-- Merge and provenance validation were weak. A successful shard or merge could not by itself prove that the source inputs, ownership, and checkpoint identity were correct.
-- Publication tests were insufficient. Important failure and tamper cases were not exercised.
+All paths below are on Polaris. The row-level files are the source for recomputation; `report.json` is the final summary.
 
-Why this mattered: a CPU load smoke can pass while the actual launcher, statistical interpretation, provenance, or published result is wrong. The review therefore rejected any Polaris evaluation or Gate 8 acceptance.
+```text
+ROOT=/Users/924254653/adaptive_roi_gate8_runs_20260814_r2/full-47417/merged
+per_hop.csv       912,270 rows  sha256 5aa9029b60fbc9d51eb572bb444b0668ec01ef0f297f6dd2c8bc33fd9d871678
+per_clip.csv        5,330 rows  sha256 48ac949760678499152034ca7f6ae922cf738fd1b93a29b0b0c530ecb64b73eb
+per_subject.csv       890 rows  sha256 a148cffc433c5274378863265bc18d671ee85488a1e1a4325c0571d69d9fc26f
+report.json                    sha256 cf5b7da4de7d046b34a5c594ea3972a046ee19e2a185e38a14e1e461b13582da
+run_manifest.json              sha256 ef27debbdde8e8fbdce842981f3fdabb74ac45e11190afd0e9628f318bf22a53
+COMPLETE.json                  sha256 c09ec7055c130bad23e3b060fb6b81d6b0800ac3aa27357c13c6b58a3922a83c
+```
 
-### Terra first repair — `2026-08-14 UTC`
+Verification on Polaris:
 
-Terra attempted to repair the findings by fixing launcher propagation, marking uncertain training provenance as `descriptive_unverified`, expanding report and behavior metrics, separating bootstrap estimands, and adding a `run_manifest` with stronger hashes and coverage checks. Terra reported 12/12 focused tests and 122 passing tests in the full suite. No Polaris run was started.
+```bash
+sacct -X -j 47417 --format=JobID,State,Elapsed,ExitCode -n -P
+find "$ROOT" -maxdepth 1 -name COMPLETE.json -print
+sha256sum "$ROOT"/{per_hop.csv,per_clip.csv,per_subject.csv,report.json,run_manifest.json,COMPLETE.json}
+```
 
-These changes addressed the identified areas in the local implementation, but they did not constitute acceptance. The next Sol review still found publication and identity gaps.
+The three preflight jobs are retained as reproducibility evidence: `47415` completed in `10:53`, repeat `47416` completed in `11:01`, and both wrote `COMPLETE.json` before the full job began.
 
-### Second Sol review — `NO-GO`, `2026-08-14 UTC`
+## Repair log
 
-Sol found:
+| Date | Evidence | Issue | Resolution |
+|---|---|---|---|
+| 2026-08-14 | Sol reviews | Initial implementation had weak production publication, shard ownership, report rebuilding, checkpoint identity, and legacy-path coupling. | Terra rewired strict publication, deterministic ownership, source-authoritative replay, identity-preserving aggregates, and clean external checkpoint locators. |
+| 2026-08-14 | Local tests | Final pre-run implementation passed 137/137 tests and Sol gave GO. | Committed as `091ba7a`. |
+| 2026-08-15 | Polaris job `47412` | A real invalid POS measurement had blank `selected_confidence` and `selected_ppr`; CSV reread treated them as required floats. Job failed after `11:01`, wrote `FAILED.json`, and produced no result. | Terra allowed those two fields to be null only when `selected_valid=False`; valid selections still require finite numeric values. Added regression tests. |
+| 2026-08-15 | Sol review and jobs `47415`–`47417` | Repair needed independent review and a repeat before full evaluation. | Sol GO; local suite 139/139; repair committed as `a39de48`; both preflights and the full run passed. |
 
-- The final report was not fully revalidated after the repair.
-- Shard ownership and clip IDs were not strict enough to prove exact, non-overlapping coverage.
-- Behavior fields were still incomplete for the intended analysis.
-- The publication path still lacked direct tests.
+The failed `47412` directory remains preserved at `/Users/924254653/adaptive_roi_gate8_runs_20260814/smoke-47412/`. It is not evidence for a model score.
 
-Why this mattered: even stronger hashes and a manifest do not make a final report trustworthy if the report is not rebuilt and checked, if shard ownership is only trusted, or if the production publication path is untested.
+## Code and boundary
 
-### Sol repair plan — `2026-08-14 UTC`
-
-Sol required the next repair to include:
-
-- a dedicated `model_publication` module;
-- exact marker and CSV schemas;
-- deterministic subject stride and clip IDs;
-- shard reaggregation and source replay;
-- an independent final artifact rebuild;
-- identity-preserving aggregates;
-- real publication, merge, and tamper tests.
-
-These were repair conditions, not an approval to run a fixture or full evaluation.
-
-### Terra latest repair — `2026-08-14 UTC`
-
-Terra added `model_publication.py`, expanded `model_replay.py`, integrated serialization changes, and added `test_gate8_model_publication.py`. Terra reported 127 total local tests and 68 focused Gate 5–8 tests passing. No Polaris evaluation, MMPD access, or legacy-code run occurred during this repair.
-
-This is local engineering evidence only. Terra did not solve the Gate 8 acceptance issues, and the reported test counts do not prove that the production runner publishes or merges safely.
-
-### Final Sol review — `NO-GO`, `2026-08-14 UTC`
-
-The final review found the following unresolved issues:
-
-- The strict publication helpers are not wired into the production runner. Production still uses permissive markers.
-- Deterministic ownership is still trusted by the runner, while the helper rejects repeated subjects. The production path therefore does not prove the ownership rule it relies on.
-- The report and `run_manifest` are not reread and rebuilt as final acceptance checks.
-- Aggregation groups only by `method_id` and `clip_id`, which can erase checkpoint identity when multiple checkpoint files share those values.
-- Tests still do not call the production publish and merge path. Helper-only tests cannot establish production behavior.
-- The checkpoint manifest directly references `/Users/atharva/Desktop/RL for RoI` paths. That violates the intended clean-runtime boundary and leaves the clean repository dependent on the legacy checkout.
-
-Why this mattered: these are integrity, identity, and reproducibility failures in the path that would create the published evidence. They prevent a reviewer from knowing that a published row belongs to the intended checkpoint, shard, source replay, and final report.
-
-## Required next repair conditions
-
-Gate 8 remains `INCOMPLETE` / `NO-GO` until all of the following are demonstrated in code review and local tests:
-
-1. The production runner uses the strict publication helpers and strict marker/CSV schemas.
-2. The runner computes and verifies deterministic subject ownership and exact clip IDs; repeated subjects and duplicate or missing clips fail closed.
-3. Checkpoint identity is preserved through replay, shard outputs, merges, reports, and all aggregate keys.
-4. The production runner rereads and independently rebuilds the final report and `run_manifest` from the published row-level artifacts.
-5. Tests directly invoke production publication and merge, including malformed markers, duplicate ownership, missing/extra clips, tampered rows, source-replay mismatch, and checkpoint-identity collisions.
-6. The checkpoint manifest uses clean-runtime references and no direct dependency on the legacy `RL for RoI` checkout.
-7. Sol reviews the repaired diff and accepts it. Only after that review may a bounded Polaris fixture be considered; until then, no Polaris fixture or full evaluation is allowed.
-
-## Evidence boundary
-
-The checkpoint files and their architecture/interface inspection are not Gate 8 results. The local test counts are not a Polaris evaluation. The existing MCD cohort definition is inherited from the accepted earlier gate, but no Gate 8 model outputs, confidence intervals, behavior conclusions, or model comparison numbers are claimed here.
+- Implementation: `scripts/verify_gate8_mcd_frozen_models.py`, `src/adaptive_roi_rppg/evaluation/model_replay.py`, and `src/adaptive_roi_rppg/evaluation/model_publication.py`.
+- Launcher: `slurm/gate8_mcd_frozen_models_full.slurm`.
+- Frozen plan: `configs/evaluation/mcd_frozen_models_v1.json`.
+- Final code commit: `a39de48`.
+- MMPD remained evaluation-only and was not accessed. Checkpoint training-config provenance remains descriptive/unverified; file hash, architecture, and replay identity were verified.
