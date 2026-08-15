@@ -114,7 +114,7 @@ def _validate_test90(path: Path) -> tuple[set[str], dict[str, float]]:
         counts = Counter(row[arm_field] for row in rows)
         if set(counts) != {"A", "Aprime", "B", "C", "D", "Dv2"} or any(v != 533 for v in counts.values()): _fail("historical per_clip is not six complete arms")
         a = [row for row in rows if row[arm_field] == "A"]; values = [float(row[mae_field]) for row in a]
-        if len({row[stem_field] for row in a}) != 533 or not all(math.isfinite(v) for v in values) or sum(values) / len(values) != HISTORICAL_LEVEL_A_MEAN_MAE: _fail("historical Level-A cohort/mean is not exact")
+        if len({row[stem_field] for row in a}) != 533 or not all(math.isfinite(v) for v in values) or not math.isclose(sum(values) / len(values), HISTORICAL_LEVEL_A_MEAN_MAE, rel_tol=0.0, abs_tol=1e-12): _fail("historical Level-A cohort/mean is not exact")
         return {row[stem_field] for row in a}, {row[stem_field]: float(row[mae_field]) for row in a}
     except (OSError, UnicodeError, ValueError, csv.Error) as exc:
         if isinstance(exc, ContractValidationError): raise

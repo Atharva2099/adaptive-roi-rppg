@@ -1,0 +1,31 @@
+{
+  "schema": "gate8-mcd-frozen-model-plan-v1",
+  "dataset_id": "mcd",
+  "split": "eval",
+  "expected_clip_count": 533,
+  "expected_subject_count": 89,
+  "exclusions": ["4952_FullHDwebcam_after", "4952_FullHDwebcam_before", "4952_IriunWebcam_after", "4952_IriunWebcam_before", "4952_USBVideo_after", "4952_USBVideo_before", "6066_USBVideo_before"],
+  "signal_config_id": "pos-v1-11ad093b3a2f7be3471d2a10da72ddd9ffd2f7985bcee0646be13e1a1b72d436",
+  "observation_schema_id": "observation-v1-101",
+  "control_config_id": "control-v1-95dd51a6ec5af1b4f2cfc953885fb14a6c83ee1ae2ddda13f5f08fef08c1c29b",
+  "deterministic": true,
+  "descriptive_checkpoint_provenance_allowed": true,
+  "checkpoints": [
+    {"method_id":"dagger_seed0","family":"dagger","seed":0,"locator":"/Users/924254653/RL-for-RoI/results/streaming/phase1/ppo/ppo_seed0_dagger_r2_seed0_advbase_ppo2m_base.zip","sha256":"4ced6433b30e45211ccf483324302a73c5fe25528f2bdf69dcd065ecec942d0d","byte_size":1104456,"provenance_status":"descriptive_unverified","training_config_provenance":"unresolved"},
+    {"method_id":"dagger_seed1","family":"dagger","seed":1,"locator":"/Users/924254653/RL-for-RoI/results/streaming/phase1/ppo/ppo_seed1_dagger_r2_seed1_advbase_ppo2m_base.zip","sha256":"350692f169e80b5c056d38ac9fd3ef9636d46bdaf90c59e3b99b2c3a383c7050","byte_size":1104460,"provenance_status":"descriptive_unverified","training_config_provenance":"unresolved"},
+    {"method_id":"dagger_seed2","family":"dagger","seed":2,"locator":"/Users/924254653/RL-for-RoI/results/streaming/phase1/ppo/ppo_seed2_dagger_r2_seed2_advbase_ppo2m_base.zip","sha256":"bc4b59ab1a6bb10983b192b51548981cedac2086bec4554d372d24a1d565f27c","byte_size":1104456,"provenance_status":"descriptive_unverified","training_config_provenance":"unresolved"},
+    {"method_id":"standard_ppo_seed0","family":"standard_ppo","seed":0,"locator":"/Users/924254653/RL-for-RoI/results/streaming/phase1/ppo/ppo_seed0_dagger_r2.zip","sha256":"bb15f5cc5c023291cde547ed32dc101e81642ceca0ebfbd083a97e2296409e57","byte_size":3296031,"provenance_status":"descriptive_unverified","training_config_provenance":"unresolved"},
+    {"method_id":"standard_ppo_seed1","family":"standard_ppo","seed":1,"locator":"/Users/924254653/RL-for-RoI/results/streaming/phase1/ppo/ppo_seed1_dagger_r2.zip","sha256":"c5221e46696be7a2097b6d165d32fc9b80bd694960fcd3ccb73a24c637e77db5","byte_size":3296035,"provenance_status":"descriptive_unverified","training_config_provenance":"unresolved"},
+    {"method_id":"standard_ppo_seed2","family":"standard_ppo","seed":2,"locator":"/Users/924254653/RL-for-RoI/results/streaming/phase1/ppo/ppo_seed2_dagger_r2.zip","sha256":"f9f7b80e47fc22c140819a24c3eb4f5945ddb0ced8bb9b5a2d7815543670c8ec","byte_size":3296031,"provenance_status":"descriptive_unverified","training_config_provenance":"unresolved"},
+    {"method_id":"advantage_ppo_seed0","family":"advantage_ppo","seed":0,"locator":"/Users/924254653/RL-for-RoI/results/streaming/phase1/ppo/ppo_seed0_dagger_r2_seed0_advbase_ppo2m.zip","sha256":"5c48245700d0b985c212369e1398c83af8ab13b6182fc59e80b1ab299cc0c506","byte_size":3296076,"provenance_status":"descriptive_unverified","training_config_provenance":"unresolved"},
+    {"method_id":"advantage_ppo_seed1","family":"advantage_ppo","seed":1,"locator":"/Users/924254653/RL-for-RoI/results/streaming/phase1/ppo/ppo_seed1_dagger_r2_seed1_advbase_ppo2m.zip","sha256":"31f1e55131ba3918c0d853dd6a836b837f443a8addf3aba9ef3699829a9dc31a","byte_size":3296080,"provenance_status":"descriptive_unverified","training_config_provenance":"unresolved"},
+    {"method_id":"advantage_ppo_seed2","family":"advantage_ppo","seed":2,"locator":"/Users/924254653/RL-for-RoI/results/streaming/phase1/ppo/ppo_seed2_dagger_r2_seed2_advbase_ppo2m.zip","sha256":"1d9a2893595bafef748e9062b224fdc5e1c3213060e28233955610498dd1fc35","byte_size":3296076,"provenance_status":"descriptive_unverified","training_config_provenance":"unresolved"}
+  ],
+  "backend": "sb3_contrib.RecurrentPPO",
+  "policy_class": "RecurrentActorCriticPolicy",
+  "observation_dim": 101,
+  "action_count": 12,
+  "lstm_hidden_size": 128,
+  "n_lstm_layers": 1,
+  "bootstrap": {"replicates":10000,"seed":8101,"unit":"subject","percentile_rule":"2.5/97.5"}
+}

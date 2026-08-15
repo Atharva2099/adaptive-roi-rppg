@@ -4,6 +4,8 @@
 
 MCD is the only training and development dataset. MMPD is evaluation-only for frozen MCD-trained checkpoints. MMPD local custody operations require explicit per-turn approval naming the exact source, destination, and operation. No MMPD-derived threshold, bucket, error pattern, or result may change MCD design.
 
+The accepted MCD manifest inventory is 3,060 train clips from 510 subjects and 540 evaluation clips from 90 subjects, with no train/evaluation subject overlap. For Gate 7, the eligible Oracle B/C teacher cohort is 3,057 train clips from the same 510 subjects. The only allowed teacher exclusions are `7412_FullHDwebcam_after`, `7412_IriunWebcam_after`, and `7412_USBVideo_after`; each has all 171 labels invalid with `degenerate_variation`. Any other invalid label is a fail-closed validation failure. These counts define eligibility, not a completed Oracle result.
+
 ## Identifiers, ordering, and ROI names
 
 `clip_id` (or stem) is opaque stable text. Uniqueness keys are `(dataset_id, clip_id, frame_idx)` for raw frames, `(dataset_id, clip_id, hop_idx)` for measurement/label hops, and `(run_id, method_id, seed, checkpoint_sha256, dataset_id, clip_id)` for per-clip results.
