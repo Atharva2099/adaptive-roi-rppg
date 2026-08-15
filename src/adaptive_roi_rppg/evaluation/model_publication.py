@@ -68,6 +68,7 @@ def write_csv_exclusive(path: str | Path, rows: Sequence[Mapping[str, Any]], fie
 _INTS = {"hop_idx", "seed", "proposed_action", "executed_action", "previous_action", "pre_hold_count", "post_hold_count", "hop_count", "clip_count", "proposed_action_count", "executed_action_count", "override_count", "invalid_selected_count", "hold_max", "switch_count"} | {f"action_count_{i:02d}" for i in range(12)}
 _FLOATS = {"hop_time_s", "gt_hr_bpm", "abs_error_bpm", "selected_hr_bpm", "selected_confidence", "selected_ppr", "selected_coverage", "pre_belief_hr_bpm", "post_belief_hr_bpm", "post_belief_velocity", "post_belief_std_bpm", "mae_bpm", "equal_clip_mae_bpm", "hold_mean", "switches_per_hop", "roi_index_jump_mean_abs", "selected_hr_jump_mean_abs_bpm", "belief_jump_mean_abs_bpm"}
 _OPTIONAL = {"seed", "checkpoint_sha256", "previous_action", "override_reason", "selected_invalid_reason", "selected_hr_bpm", "selected_coverage"}
+_NULLABLE_WHEN_INVALID = {"selected_confidence", "selected_ppr"}
 _BOOLEANS = {"legal", "selected_valid"}
 
 def read_strict_csv(path: str | Path, fields: Sequence[str]) -> list[dict[str, Any]]:
@@ -84,7 +85,7 @@ def read_strict_csv(path: str | Path, fields: Sequence[str]) -> list[dict[str, A
         value: dict[str, Any] = {}
         for key, item in row.items():
             if key is None or item is None: _fail("Gate 8 CSV has malformed row")
-            if key in _OPTIONAL and item == "": value[key] = None; continue
+            if (key in _OPTIONAL or key in _NULLABLE_WHEN_INVALID) and item == "": value[key] = None; continue
             try:
                 if key in _INTS:
                     if item.strip() != item or item in {"", "+0", "-0"}: _fail("Gate 8 integer encoding is invalid")
@@ -103,6 +104,7 @@ def read_strict_csv(path: str | Path, fields: Sequence[str]) -> list[dict[str, A
 def _validate_row(row: Mapping[str, Any]) -> None:
     if "hop_idx" in row and (row["hop_idx"] < 0 or row.get("proposed_action", 0) not in range(12) or row.get("executed_action", 0) not in range(12)): _fail("Gate 8 action or hop is invalid")
     if row.get("previous_action") is not None and row["previous_action"] not in range(12): _fail("Gate 8 previous action is invalid")
+    if row.get("selected_valid") is True and any(row.get(key) is None for key in _NULLABLE_WHEN_INVALID): _fail("valid selected measurement requires confidence and PPR")
     method = row.get("method_id")
     if method == "full_face":
         if row.get("family") != "fixed_full_face" or row.get("seed") is not None or row.get("checkpoint_sha256") is not None: _fail("full_face identity must use null seed and checkpoint hash")

@@ -48,6 +48,22 @@ class Gate8PublicationTests(unittest.TestCase):
             path.write_text(",".join(reversed(HOP_FIELDS)) + "\n")
             with self.assertRaises(ContractValidationError): read_strict_csv(path, HOP_FIELDS)
 
+    def test_invalid_selected_measurement_round_trips_with_blank_confidence_and_ppr(self):
+        row = hop(); row.update(selected_valid=False, selected_invalid_reason="missing_required_rgb", selected_hr_bpm=None, selected_confidence=None, selected_ppr=None, selected_coverage=0.3478)
+        with TemporaryDirectory() as tmp:
+            path = Path(tmp) / "per_hop.csv"; path.write_bytes(csv_bytes([row], HOP_FIELDS))
+            self.assertEqual(read_strict_csv(path, HOP_FIELDS), [row])
+
+    def test_selected_confidence_and_ppr_remain_strict_numeric_fields(self):
+        with TemporaryDirectory() as tmp:
+            for field in ("selected_confidence", "selected_ppr"):
+                row = hop(); row[field] = "not-a-number"
+                path = Path(tmp) / f"{field}.csv"; path.write_bytes(csv_bytes([row], HOP_FIELDS))
+                with self.assertRaises(ContractValidationError): read_strict_csv(path, HOP_FIELDS)
+            row = hop(); row["selected_confidence"] = None
+            path = Path(tmp) / "valid_blank.csv"; path.write_bytes(csv_bytes([row], HOP_FIELDS))
+            with self.assertRaises(ContractValidationError): read_strict_csv(path, HOP_FIELDS)
+
     def test_markers_require_exact_lifecycle_provenance_and_outputs(self):
         p = provenance()
         started = marker_payload("STARTED", "run", p)
