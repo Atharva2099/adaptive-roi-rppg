@@ -7,7 +7,7 @@
 #SBATCH --cpus-per-task=2
 #SBATCH --time=12:00:00
 set -euo pipefail
-: "${BASE:?}" "${OUT:?}" "${DECLARED_CODE_SNAPSHOT_SHA256:?}"
+: "${BASE:?}" "${OUT:?}" "${CHECKPOINT_ROOT:?}" "${DECLARED_CODE_SNAPSHOT_SHA256:?}"
 PYTHON=${PYTHON:-$BASE/.venv/bin/python}; [[ -x "$PYTHON" ]]
 unset PYTHONPATH; export PYTHONNOUSERSITE=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1
 export PYTHONPATH="$BASE/src"
@@ -33,7 +33,7 @@ PY
 )
 [[ "$DECLARED_CODE_SNAPSHOT_SHA256" =~ ^[0-9a-f]{64}$ && "$CODE_HASH" == "$DECLARED_CODE_SNAPSHOT_SHA256" ]] || { echo "declared code hash mismatch" >&2; exit 1; }
 RUN="$OUT/full-$SLURM_JOB_ID"; export RUN; mkdir -p "$RUN/shards"
-COMMON=(--manifest-tree "$MANIFEST" --state-root "$STATE" --gt-root "$GT" --plan "$PLAN" --shard-count 16 --code-snapshot-sha256 "$CODE_HASH")
+COMMON=(--manifest-tree "$MANIFEST" --state-root "$STATE" --gt-root "$GT" --plan "$PLAN" --checkpoint-root "$CHECKPOINT_ROOT" --shard-count 16 --code-snapshot-sha256 "$CODE_HASH")
 srun --ntasks=16 --ntasks-per-node=16 --cpus-per-task=2 --exclusive bash -c 'exec "$1" "$2" "${@:3}" --shard-index "$SLURM_PROCID" --output-dir "$RUN/shards/shard-$SLURM_PROCID"' _ "$PYTHON" "$BASE/scripts/verify_gate8_mcd_frozen_models.py" "${COMMON[@]}"
 SHARDS=(); for i in $(seq 0 15); do SHARDS+=(--shard-dir "$RUN/shards/shard-$i"); done
 "$PYTHON" "$BASE/scripts/verify_gate8_mcd_frozen_models.py" --merge --output-dir "$RUN/merged" "${COMMON[@]}" "${SHARDS[@]}"

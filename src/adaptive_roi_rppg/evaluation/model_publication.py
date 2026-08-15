@@ -45,9 +45,11 @@ def canonical_subject_shard(subject_ids: Sequence[str], shard_index: int, shard_
     return ordered[shard_index::shard_count]
 
 def expected_shard_clip_ids(clips: Sequence[Mapping[str, Any]], shard_index: int, shard_count: int) -> tuple[str, ...]:
-    subjects = canonical_subject_shard([str(c["subject_id"]) for c in clips], shard_index, shard_count)
-    chosen = [c for c in clips if c["subject_id"] in set(subjects)]
-    ids = tuple(sorted(str(c["clip_id"]) for c in chosen))
+    # A subject normally has several clips.  Deduplicate before applying the
+    # stride; duplicate clip IDs are still forbidden below.
+    subjects = canonical_subject_shard(sorted({str(c["subject_id"]) for c in clips}), shard_index, shard_count)
+    chosen = [c for c in clips if str(c["subject_id"]) in set(subjects)]
+    ids = tuple(str(c["clip_id"]) for c in sorted(chosen, key=lambda c: str(c["clip_id"])))
     if len(set(ids)) != len(ids): _fail("canonical clip IDs are duplicated")
     return ids
 
@@ -170,6 +172,15 @@ def validate_directory(root: str | Path, expected: set[str], *, kind: str, prove
     else: _fail("Gate 8 STARTED-only directory is not acceptable for merge")
     for name in names: _regular(base / name)
 
+def validate_precomplete_directory(root: str | Path, outputs: Sequence[str], *, kind: str, provenance: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
+    """Perform every final fallible publication check before COMPLETE exists."""
+    base = Path(root); expected = {MARKER_NAMES["STARTED"], *outputs}
+    if base.is_symlink() or not base.is_dir() or {path.name for path in base.iterdir()} != expected:
+        _fail("Gate 8 pre-COMPLETE publication has missing or extra files")
+    read_marker(base, "STARTED", kind=kind, provenance=provenance)
+    for name in expected: _regular(base / name)
+    return artifact_map(base, outputs)
+
 def validate_shard_manifest(payload: Mapping[str, Any], *, provenance: Mapping[str, Any], expected_subject_ids: Sequence[str], expected_clip_ids: Sequence[str], shard_index: int, shard_count: int, checkpoint_identities: Sequence[Mapping[str, Any]]) -> None:
     fields = {"schema", "plan_id", "code_snapshot_sha256", "source_inventory_sha256", "environment_sha256", "job_id", "node", "command", "shard_index", "shard_count", "subject_ids", "clip_ids", "checkpoint_identities", "expected_hops"}
     if set(payload) != fields or payload.get("schema") != SHARD_SCHEMA: _fail("Gate 8 shard manifest schema is invalid")
@@ -177,4 +188,10 @@ def validate_shard_manifest(payload: Mapping[str, Any], *, provenance: Mapping[s
     if payload["subject_ids"] != list(expected_subject_ids) or payload["clip_ids"] != list(expected_clip_ids) or payload["checkpoint_identities"] != list(checkpoint_identities): _fail("Gate 8 shard manifest ownership or identities differ")
     if not isinstance(payload["expected_hops"], Mapping) or set(payload["expected_hops"]) != set(expected_clip_ids) or any(not isinstance(n, int) or n < 1 for n in payload["expected_hops"].values()): _fail("Gate 8 shard expected hops are invalid")
 
-__all__ = ["MARKER_SCHEMA", "SHARD_SCHEMA", "REPORT_SCHEMA", "RUN_MANIFEST_SCHEMA", "MARKER_NAMES", "HOP_FIELDS", "CLIP_FIELDS", "SUBJECT_FIELDS", "canonical_subject_shard", "expected_shard_clip_ids", "csv_bytes", "write_csv_exclusive", "read_strict_csv", "validate_hop_rows", "artifact_map", "marker_payload", "validate_marker", "write_marker", "read_marker", "validate_directory", "validate_shard_manifest"]
+def validate_exact_json(payload: Mapping[str, Any], *, schema: str, expected: Mapping[str, Any]) -> None:
+    """Validate a final Gate 8 JSON artifact against a rebuilt canonical value."""
+    if not isinstance(payload, Mapping) or payload.get("schema") != schema or set(payload) != set(expected):
+        _fail("Gate 8 JSON schema or fields are invalid")
+    if dict(payload) != dict(expected): _fail("Gate 8 JSON contents differ from the rebuilt artifact")
+
+__all__ = ["MARKER_SCHEMA", "SHARD_SCHEMA", "REPORT_SCHEMA", "RUN_MANIFEST_SCHEMA", "MARKER_NAMES", "HOP_FIELDS", "CLIP_FIELDS", "SUBJECT_FIELDS", "canonical_subject_shard", "expected_shard_clip_ids", "csv_bytes", "write_csv_exclusive", "read_strict_csv", "validate_hop_rows", "artifact_map", "marker_payload", "validate_marker", "write_marker", "read_marker", "validate_directory", "validate_precomplete_directory", "validate_shard_manifest", "validate_exact_json"]

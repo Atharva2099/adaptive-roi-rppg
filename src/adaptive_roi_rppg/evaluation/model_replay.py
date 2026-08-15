@@ -91,10 +91,16 @@ def score_frozen_rollout(rollout: Sequence[UnscoredModelHop], labels: Sequence[L
 def summarize_model_rows(rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
     """Exact row-level clip and subject aggregates; seed rows are never pooled."""
     if not rows: _fail("model rows are empty")
-    clips: dict[tuple[str, str], list[dict[str, Any]]] = {}
-    for row in rows: clips.setdefault((row["method_id"], row["clip_id"]), []).append(row)
+    identity_fields=("method_id","family","seed","checkpoint_sha256")
+    def identity(row): return tuple(row[field] for field in identity_fields)
+    def require_one_identity(values):
+        identities={identity(row) for row in values}
+        if len(identities) != 1: _fail("model aggregation found conflicting checkpoint identities")
+    clips: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
+    for row in rows: clips.setdefault((*identity(row), row["clip_id"]), []).append(row)
     clip_rows = []
-    for (method_id, clip_id), values in sorted(clips.items()):
+    for (method_id, family, seed, checkpoint_sha256, clip_id), values in sorted(clips.items()):
+        require_one_identity(values)
         values.sort(key=lambda r:r["hop_idx"])
         if [r["hop_idx"] for r in values] != list(range(len(values))): _fail("model rows have non-contiguous hops")
         actions=[r["executed_action"] for r in values]; first=values[0]
@@ -105,31 +111,38 @@ def summarize_model_rows(rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
         jumps=[abs(a-b) for a,b in zip(actions,actions[1:])]
         proposed=[r.get("proposed_action", r["executed_action"]) for r in values]
         switches=sum(a!=b for a,b in zip(actions, actions[1:]))
-        clip_rows.append({"method_id":method_id,"family":first["family"],"seed":first["seed"],"checkpoint_sha256":first["checkpoint_sha256"],"clip_id":clip_id,"subject_id":first["subject_id"],"view":first["view"],"condition":first["condition"],"hop_count":len(values),"mae_bpm":sum(r["abs_error_bpm"] for r in values)/len(values),"proposed_action_count":len(proposed),"executed_action_count":len(actions),"override_count":sum(not r["legal"] for r in values),"invalid_selected_count":sum(not r["selected_valid"] for r in values),"hold_mean":sum(r["post_hold_count"] for r in values)/len(values),"hold_max":max(r["post_hold_count"] for r in values),"switch_count":switches,"switches_per_hop":switches/len(values),"roi_index_jump_mean_abs":sum(jumps)/len(jumps) if jumps else 0.0,"selected_hr_jump_mean_abs_bpm":_jump("selected_hr_bpm"),"belief_jump_mean_abs_bpm":_jump("post_belief_hr_bpm"),**{f"action_count_{i:02d}":actions.count(i) for i in range(12)}})
-    subjects: dict[tuple[str,str], list[dict[str,Any]]] = {}
-    for row in clip_rows: subjects.setdefault((row["method_id"],row["subject_id"]),[]).append(row)
+        clip_rows.append({"method_id":method_id,"family":family,"seed":seed,"checkpoint_sha256":checkpoint_sha256,"clip_id":clip_id,"subject_id":first["subject_id"],"view":first["view"],"condition":first["condition"],"hop_count":len(values),"mae_bpm":sum(r["abs_error_bpm"] for r in values)/len(values),"proposed_action_count":len(proposed),"executed_action_count":len(actions),"override_count":sum(not r["legal"] for r in values),"invalid_selected_count":sum(not r["selected_valid"] for r in values),"hold_mean":sum(r["post_hold_count"] for r in values)/len(values),"hold_max":max(r["post_hold_count"] for r in values),"switch_count":switches,"switches_per_hop":switches/len(values),"roi_index_jump_mean_abs":sum(jumps)/len(jumps) if jumps else 0.0,"selected_hr_jump_mean_abs_bpm":_jump("selected_hr_bpm"),"belief_jump_mean_abs_bpm":_jump("post_belief_hr_bpm"),**{f"action_count_{i:02d}":actions.count(i) for i in range(12)}})
+    subjects: dict[tuple[Any, ...], list[dict[str,Any]]] = {}
+    for row in clip_rows: subjects.setdefault((*identity(row),row["subject_id"]),[]).append(row)
     behavior=("switches_per_hop","hold_mean","roi_index_jump_mean_abs","selected_hr_jump_mean_abs_bpm","belief_jump_mean_abs_bpm","invalid_selected_count")
     subject_rows=[]
-    for (method, subject), values in sorted(subjects.items()):
+    for (method, family, seed, checkpoint_sha256, subject), values in sorted(subjects.items()):
+        require_one_identity(values)
         first=values[0]
-        subject_rows.append({"method_id":method,"family":first["family"],"seed":first["seed"],"checkpoint_sha256":first["checkpoint_sha256"],"subject_id":subject,"clip_count":len(values),"equal_clip_mae_bpm":sum(x["mae_bpm"] for x in values)/len(values),"proposed_action_count":sum(x["proposed_action_count"] for x in values),"executed_action_count":sum(x["executed_action_count"] for x in values),"override_count":sum(x["override_count"] for x in values),"invalid_selected_count":sum(x["invalid_selected_count"] for x in values),"hold_mean":sum(x["hold_mean"] for x in values)/len(values),"hold_max":max(x["hold_max"] for x in values),"switches_per_hop":sum(x["switches_per_hop"] for x in values)/len(values),"roi_index_jump_mean_abs":sum(x["roi_index_jump_mean_abs"] for x in values)/len(values),"selected_hr_jump_mean_abs_bpm":sum(x["selected_hr_jump_mean_abs_bpm"] for x in values)/len(values),"belief_jump_mean_abs_bpm":sum(x["belief_jump_mean_abs_bpm"] for x in values)/len(values)})
-    by_method: dict[str,list[dict[str,Any]]] = {}
-    for row in clip_rows: by_method.setdefault(row["method_id"],[]).append(row)
+        subject_rows.append({"method_id":method,"family":family,"seed":seed,"checkpoint_sha256":checkpoint_sha256,"subject_id":subject,"clip_count":len(values),"equal_clip_mae_bpm":sum(x["mae_bpm"] for x in values)/len(values),"proposed_action_count":sum(x["proposed_action_count"] for x in values),"executed_action_count":sum(x["executed_action_count"] for x in values),"override_count":sum(x["override_count"] for x in values),"invalid_selected_count":sum(x["invalid_selected_count"] for x in values),"hold_mean":sum(x["hold_mean"] for x in values)/len(values),"hold_max":max(x["hold_max"] for x in values),"switches_per_hop":sum(x["switches_per_hop"] for x in values)/len(values),"roi_index_jump_mean_abs":sum(x["roi_index_jump_mean_abs"] for x in values)/len(values),"selected_hr_jump_mean_abs_bpm":sum(x["selected_hr_jump_mean_abs_bpm"] for x in values)/len(values),"belief_jump_mean_abs_bpm":sum(x["belief_jump_mean_abs_bpm"] for x in values)/len(values)})
+    by_method: dict[tuple[Any, ...],list[dict[str,Any]]] = {}
+    for row in clip_rows: by_method.setdefault(identity(row),[]).append(row)
     checkpoint_results={}
-    for method, values in sorted(by_method.items()):
-        subs=[row for row in subject_rows if row["method_id"]==method]
+    for method_identity, values in sorted(by_method.items()):
+        method, family, seed, checkpoint_sha256 = method_identity; require_one_identity(values)
+        subs=[row for row in subject_rows if identity(row)==method_identity]
         hops=sum(x["hop_count"] for x in values); actions={f"action_{i:02d}":sum(x[f"action_count_{i:02d}"] for x in values) for i in range(12)}
         first=values[0]
-        checkpoint_results[method]={"method_id":method,"family":first["family"],"seed":first["seed"],"checkpoint_sha256":first["checkpoint_sha256"],"clip_count":len(values),"subject_count":len(subs),"hop_count":hops,"equal_clip_mae_bpm":sum(x["mae_bpm"] for x in values)/len(values),"equal_subject_mae_bpm":sum(x["equal_clip_mae_bpm"] for x in subs)/len(subs),"proposed_action_count":sum(x["proposed_action_count"] for x in values),"executed_action_count":sum(x["executed_action_count"] for x in values),"override_count":sum(x["override_count"] for x in values),"switches_per_hop":sum(x["switch_count"] for x in values)/hops,"hold_mean":sum(x["hold_mean"]*x["hop_count"] for x in values)/hops,"hold_max":max(x["hold_max"] for x in values),"roi_index_jump_mean_abs":sum(x["roi_index_jump_mean_abs"]*max(x["hop_count"]-1,0) for x in values)/max(sum(max(x["hop_count"]-1,0) for x in values),1),"selected_hr_jump_mean_abs_bpm":sum(x["selected_hr_jump_mean_abs_bpm"] for x in values)/len(values),"belief_jump_mean_abs_bpm":sum(x["belief_jump_mean_abs_bpm"] for x in values)/len(values),"invalid_selected_count":sum(x["invalid_selected_count"] for x in values),"action_distribution":actions}
+        if method in checkpoint_results: _fail("model aggregation found duplicate method identity")
+        checkpoint_results[method]={"method_id":method,"family":family,"seed":seed,"checkpoint_sha256":checkpoint_sha256,"clip_count":len(values),"subject_count":len(subs),"hop_count":hops,"equal_clip_mae_bpm":sum(x["mae_bpm"] for x in values)/len(values),"equal_subject_mae_bpm":sum(x["equal_clip_mae_bpm"] for x in subs)/len(subs),"proposed_action_count":sum(x["proposed_action_count"] for x in values),"executed_action_count":sum(x["executed_action_count"] for x in values),"override_count":sum(x["override_count"] for x in values),"switches_per_hop":sum(x["switch_count"] for x in values)/hops,"hold_mean":sum(x["hold_mean"]*x["hop_count"] for x in values)/hops,"hold_max":max(x["hold_max"] for x in values),"roi_index_jump_mean_abs":sum(x["roi_index_jump_mean_abs"]*max(x["hop_count"]-1,0) for x in values)/max(sum(max(x["hop_count"]-1,0) for x in values),1),"selected_hr_jump_mean_abs_bpm":sum(x["selected_hr_jump_mean_abs_bpm"] for x in values)/len(values),"belief_jump_mean_abs_bpm":sum(x["belief_jump_mean_abs_bpm"] for x in values)/len(values),"invalid_selected_count":sum(x["invalid_selected_count"] for x in values),"action_distribution":actions}
     cells=[]; view_rows=[]; condition_rows=[]
-    for method, values in sorted(by_method.items()):
+    for method_identity, values in sorted(by_method.items()):
+        method, family, seed, checkpoint_sha256 = method_identity
+        def cell_summary(selected, **dimensions):
+            hops=sum(x["hop_count"] for x in selected)
+            return {"method_id":method,"family":family,"seed":seed,"checkpoint_sha256":checkpoint_sha256,**dimensions,"clip_count":len(selected),"hop_count":hops,"equal_clip_mae_bpm":sum(x["mae_bpm"] for x in selected)/len(selected),"switches_per_hop":sum(x["switch_count"] for x in selected)/hops,"hold_mean":sum(x["hold_mean"]*x["hop_count"] for x in selected)/hops,"invalid_selected_count":sum(x["invalid_selected_count"] for x in selected)}
         for view, condition in sorted({(x["view"],x["condition"]) for x in values}):
             selected=[x for x in values if (x["view"],x["condition"])==(view,condition)]
-            cells.append({"method_id":method,"view":view,"condition":condition,"clip_count":len(selected),"equal_clip_mae_bpm":sum(x["mae_bpm"] for x in selected)/len(selected)})
+            cells.append(cell_summary(selected, view=view, condition=condition))
         for view in sorted({x["view"] for x in values}):
-            selected=[x for x in values if x["view"]==view]; view_rows.append({"method_id":method,"view":view,"clip_count":len(selected),"equal_clip_mae_bpm":sum(x["mae_bpm"] for x in selected)/len(selected)})
+            selected=[x for x in values if x["view"]==view]; view_rows.append(cell_summary(selected, view=view))
         for condition in sorted({x["condition"] for x in values}):
-            selected=[x for x in values if x["condition"]==condition]; condition_rows.append({"method_id":method,"condition":condition,"clip_count":len(selected),"equal_clip_mae_bpm":sum(x["mae_bpm"] for x in selected)/len(selected)})
+            selected=[x for x in values if x["condition"]==condition]; condition_rows.append(cell_summary(selected, condition=condition))
     family_results=[]
     for family in sorted({x["family"] for x in clip_rows if x["family"]!="fixed_full_face"}):
         members=sorted({x["method_id"] for x in clip_rows if x["family"]==family})

@@ -5,10 +5,11 @@ from tempfile import TemporaryDirectory
 
 from adaptive_roi_rppg.contracts.errors import ContractValidationError
 from adaptive_roi_rppg.evaluation.model_publication import (
-    HOP_FIELDS, MARKER_NAMES, artifact_map, canonical_subject_shard, csv_bytes,
+    HOP_FIELDS, MARKER_NAMES, artifact_map, canonical_subject_shard, csv_bytes, expected_shard_clip_ids,
     marker_payload, read_strict_csv, validate_directory, validate_hop_rows,
     validate_marker, write_marker,
 )
+from adaptive_roi_rppg.evaluation.model_replay import summarize_model_rows
 
 
 def provenance():
@@ -35,6 +36,8 @@ class Gate8PublicationTests(unittest.TestCase):
     def test_canonical_stride_is_deterministic(self):
         self.assertEqual(canonical_subject_shard(["s3", "s1", "s2"], 1, 2), ("s2",))
         with self.assertRaises(ContractValidationError): canonical_subject_shard(["s1", "s1"], 0, 2)
+        clips=[{"subject_id":"s1","clip_id":"c2"},{"subject_id":"s1","clip_id":"c1"},{"subject_id":"s2","clip_id":"c3"}]
+        self.assertEqual(expected_shard_clip_ids(clips, 0, 2), ("c1","c2"))
 
     def test_strict_hop_csv_rejects_reordered_and_tampered_hops(self):
         with TemporaryDirectory() as tmp:
@@ -74,6 +77,11 @@ class Gate8PublicationTests(unittest.TestCase):
         validate_hop_rows([row])
         row["seed"] = 0
         with self.assertRaises(ContractValidationError): validate_hop_rows([row])
+
+    def test_aggregation_rejects_conflicting_checkpoint_identity(self):
+        first, second = hop("c", 0), hop("c", 1)
+        second["checkpoint_sha256"] = "f" * 64
+        with self.assertRaises(ContractValidationError): summarize_model_rows([first, second])
 
 
 if __name__ == "__main__": unittest.main()

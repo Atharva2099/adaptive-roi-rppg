@@ -108,6 +108,23 @@ class FrozenModelReplayTests(unittest.TestCase):
             with self.assertRaises(ContractValidationError): load_frozen_model_plan(path)
         finally: path.unlink(missing_ok=True)
 
+    def test_plan_strict_top_level_architecture_and_bootstrap_schema(self):
+        valid=json.loads(Path("configs/evaluation/mcd_frozen_models_v1.json").read_text())
+        with TemporaryDirectory() as tmp:
+            path=Path(tmp)/"plan.json"
+            def rejects(mutator):
+                candidate=json.loads(json.dumps(valid)); mutator(candidate); path.write_text(json.dumps(candidate))
+                with self.assertRaises(ContractValidationError): load_frozen_model_plan(path)
+            path.write_text(json.dumps(valid)); self.assertEqual(len(load_frozen_model_plan(path).checkpoints),9)
+            rejects(lambda item: item.update(unexpected=True))
+            rejects(lambda item: item.update(backend="other"))
+            rejects(lambda item: item.update(policy_class="ActorCriticPolicy"))
+            for field, value in (("observation_dim",100),("action_count",11),("lstm_hidden_size",127),("n_lstm_layers",2),("deterministic",False)):
+                rejects(lambda item, field=field, value=value: item.update({field:value}))
+            rejects(lambda item: item.update(bootstrap={"replicates":10000,"seed":8101,"unit":"clip","percentile_rule":"2.5/97.5"}))
+            rejects(lambda item: item.update(bootstrap={"replicates":10000,"seed":8101,"unit":"subject","percentile_rule":"2.5/97.5","extra":True}))
+            rejects(lambda item: item["bootstrap"].update(comparison_seeds=[8101] * 12))
+
     def test_adapter_rejects_wrong_file_identity_before_deserialization(self):
         with TemporaryDirectory() as tmp:
             path=Path(tmp)/"checkpoint.zip"; path.write_bytes(b"data")
