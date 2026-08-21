@@ -1,0 +1,13 @@
+# Gate 9: minimal MMPD engineering path
+
+This is an evaluation-only structural implementation. The canonical scientific plan remains 15 subjects, 300 clips, and its sealed rules. The checked-in engineering manifest excludes `p29_3`, contains 299 clips, ten primary arms, 53 hops per clip, and 158,470 primary rows. It is explicitly not a scientific result.
+
+The intended path is sealed cohort -> authenticated regular MAT/video source -> injectable causal ROI RGB extraction -> causal POS/HR -> frozen-policy replay -> Oracle B/C diagnostics -> canonical `per_hop.csv` -> row-rebuilt clip and subject summaries -> `COMPLETE.json` last. No MMPD data is used for training, tuning, reward design, feature design, calibration, or checkpoint selection.
+
+The publication boundary rejects symlinks, changed source bytes, unknown clips, duplicate method/clip/hop keys, missing validity reasons, GT observations, non-causal resets, and incomplete lattices. A run starts with exclusive `STARTED.json`; caught pre-completion failures write `FAILED.json`; only a fully validated artifact inventory can write `COMPLETE.json`.
+
+Production preflight requires an authenticated 299-entry raw-source inventory whose relative locators resolve to regular non-symlink files with matching byte sizes and SHA-256 values; corrected-GT and metadata rule files with matching locators, sizes, and hashes; the exact ten method-to-family/seed/kind checkpoint identities; an extractor callable whose resolved source is the authenticated code snapshot; and the sealed effective plan hash. Gate 9 replay is implemented locally so it initializes `mmpd` controller state and never calls the MCD replay ruler; the extractor remains the explicit MAT/video-to-frames boundary because MediaPipe and authenticated MMPD inputs are not available in this checkout. The implementation does not run full MMPD extraction, Slurm jobs, or scientific corrected-GT/metadata rules. These prerequisites remain blocked until their actual files and hashes are sealed. No artifact from this engineering path is a scientific result.
+
+## Evidence status
+
+`FACT`: the synthetic end-to-end test exercises the production callable, exact 299-clip lattice, Oracle B/C inputs, row-derived summaries, subject-block bootstrap metadata, and terminal publication validation. `INCOMPLETE`: no authenticated MMPD MAT/video bundle, rule files, checkpoints, or MediaPipe run is present locally, so the 299 engineering execution and snapshot-versus-minimal row comparison have not been run. `p29_3` remains excluded only for the engineering rule-defined final-hop scoring issue; this exclusion is not a scientific cohort decision.
