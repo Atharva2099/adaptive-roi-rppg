@@ -11,3 +11,5 @@ Production preflight requires an authenticated 299-entry raw-source inventory wh
 ## Evidence status
 
 `FACT`: the synthetic end-to-end test exercises the production callable, exact 299-clip lattice, Oracle B/C inputs, row-derived summaries, subject-block bootstrap metadata, and terminal publication validation. `INCOMPLETE`: no authenticated MMPD MAT/video bundle, rule files, checkpoints, or MediaPipe run is present locally, so the 299 engineering execution and snapshot-versus-minimal row comparison have not been run. `p29_3` remains excluded only for the engineering rule-defined final-hop scoring issue; this exclusion is not a scientific cohort decision.
+
+A read-only workspace check found 33 MAT files in the legacy `MMPD random group` directory, not the required 299-clip cohort. The legacy environment contains a MediaPipe Tasks model asset, but the one-clip `p1_0` extraction smoke could not initialize the CPU face-landmarker on this macOS runtime because the graph still requested `kGpuService`/NSOpenGL. This is preserved as an environment limitation, not converted into a result.

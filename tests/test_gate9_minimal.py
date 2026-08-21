@@ -5,7 +5,7 @@ from adaptive_roi_rppg.contracts.errors import ContractValidationError
 from adaptive_roi_rppg.evaluation.adapters.mmpd.plan import build_engineering_plan, Gate9Plan, load_gate9_plan
 from adaptive_roi_rppg.evaluation.adapters.mmpd.raw_source import capture_source_bytes
 from adaptive_roi_rppg.evaluation.adapters.mmpd.publication import HOP_FIELDS, rebuild_gate9_artifacts, start_gate9_evaluation, publish_gate9_evaluation, fail_gate9_evaluation, validate_gate9_evaluation_tree
-from adaptive_roi_rppg.evaluation.adapters.mmpd.extraction import execute_extractor
+from adaptive_roi_rppg.evaluation.adapters.mmpd.extraction import execute_extractor, load_mmpd_mat
 from adaptive_roi_rppg.evaluation.adapters.mmpd.preflight import preflight_gate9_inputs
 
 def synthetic_extractor(*, plan, provenance):
@@ -50,6 +50,13 @@ class Gate9PlanTests(unittest.TestCase):
     def test_clip_names(self): self.assertNotIn("p29_3",plan().expected_clip_ids)
 
 class Gate9SourceTests(unittest.TestCase):
+    def test_mat_loader_authenticates_video_and_gt(self):
+        import numpy as np
+        from scipy.io import savemat
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d)/"p1_0.mat"; savemat(p, {"video": np.zeros((2, 2, 2, 3), dtype=np.float32), "GT_ppg": np.ones((1, 2))})
+            raw=p.read_bytes(); loaded=load_mmpd_mat(str(p), expected_sha256=hashlib.sha256(raw).hexdigest(), expected_bytes=len(raw)); self.assertEqual(loaded["video"].shape,(2,2,2,3)); self.assertEqual(loaded["gt_ppg"].shape,(2,))
+
     def test_hash_and_size(self):
         with tempfile.TemporaryDirectory() as d:
             p=Path(d)/"x.mat"; p.write_bytes(b"abc"); c=capture_source_bytes(p,"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",3); self.assertEqual(c.byte_size,3)
