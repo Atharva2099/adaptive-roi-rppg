@@ -157,6 +157,13 @@ def publish_gate9_evaluation(root: str | Path, artifacts: Mapping[str, bytes], m
 def fail_gate9_evaluation(root: str | Path, error: BaseException) -> None:
     base = Path(root)
     if (base / "COMPLETE.json").exists() or (base / "FAILED.json").exists(): return
+    # A failed run is terminal and intentionally contains no ambiguous partial
+    # artifact set.  Only files created by this publication protocol are
+    # removed; STARTED.json remains as the immutable run binding.
+    for name in (*ARTIFACTS, "COMPLETE.json"):
+        target = base / name
+        if target.exists() or target.is_symlink():
+            target.unlink()
     _exclusive(base / "FAILED.json", canonical_json_bytes({"state": "FAILED", "schema": "gate9-evaluation-publication-v1", "error": type(error).__name__ + ": " + str(error)}))
 
 def validate_gate9_evaluation_tree(root: str | Path, *, require_complete: bool = True) -> None:

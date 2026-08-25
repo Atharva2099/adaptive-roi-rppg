@@ -40,8 +40,8 @@ fail-closed and rejects the plan.
   `abs(post_belief_hr_bpm - gt_hr_bpm)`. Equal scores use the lowest canonical
   action index. B uses the current hop's GT, but does not inspect later camera
   hops or later GT values when choosing the current action.
-- **Oracle C (`beam_c`)** is a sequence-aware GT-informed teacher. It expands
-  legal action sequences with beam width 8, carries each candidate's complete
+- **Oracle C (`beam_c`)** is a sequence-aware, noncausal width-8 beam teacher. It expands
+  legal action sequences with the accepted beam width exactly 8, carries each candidate's complete
   control and belief state, and ranks by cumulative post-update absolute error,
   then action sequence. C can use full-clip future GT and future measurements
   while choosing an earlier action.
@@ -120,7 +120,11 @@ The ruler is the current Gate 7 MCD-train oracle protocol: clip-equal MAE
 over recomputed teacher rows, with switches counted from the selected action
 sequence. These are offline teacher diagnostics. Oracle B uses current GT and
 Oracle C uses future full-clip information, so neither is a deployable model
-score. They are not directly comparable to legacy test90 or cache values. The
+score or deployable policy evidence. The reported point estimates are
+uncertainty-incomplete because this accepted artifact has no paired,
+subject-level confidence interval. A future rerun must publish CSV-first
+row-level outputs and a paired subject-level CI before any uncertainty claim.
+They are not directly comparable to legacy test90 or cache values. The
 three excluded invalid clips remain exactly as documented above; no other
 invalid clip is accepted.
 

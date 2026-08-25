@@ -24,7 +24,11 @@ Polaris job `47417` completed with exit `0` in `05:44:25` on `lmn01`. The run us
 | Advantage PPO seed 0 / 1 / 2 | 7.6375 / 7.5007 / 7.7315 |
 | Advantage PPO seed mean | 7.6232 |
 
-All nine frozen models scored below the new full-face baseline. Family means are averages across independent seeds, not ensembles.
+All nine frozen models scored below the new full-face baseline. Each family
+value is the arithmetic mean over its independent seed checkpoints, not an
+ensemble score and not a deployment ensemble. Checkpoint identity and replay
+were verified from the sealed evaluation artifacts; the original training
+lineage remains descriptive and unverified.
 
 ## Historical comparison
 
@@ -79,4 +83,4 @@ The failed `47412` directory remains preserved at `/Users/924254653/adaptive_roi
 - Launcher: `slurm/gate8_mcd_frozen_models_full.slurm`.
 - Frozen plan: `configs/evaluation/mcd_frozen_models_v1.json`.
 - Final code commit: `a39de48`.
-- MMPD remained evaluation-only and was not accessed. Checkpoint training-config provenance remains descriptive/unverified; file hash, architecture, and replay identity were verified.
+- MMPD remained evaluation-only and was not accessed. Checkpoint training-config provenance and original training lineage remain descriptive and unverified; file hash, architecture, checkpoint identity, and replay identity were verified.

@@ -54,7 +54,7 @@ class Gate9SourceTests(unittest.TestCase):
         import numpy as np
         from scipy.io import savemat
         with tempfile.TemporaryDirectory() as d:
-            p=Path(d)/"p1_0.mat"; savemat(p, {"video": np.zeros((2, 2, 2, 3), dtype=np.float32), "GT_ppg": np.ones((1, 2))})
+            p=Path(d)/"p1_0.mat"; savemat(p, {"video": np.ones((2, 2, 2, 3), dtype=np.float32), "GT_ppg": np.ones((1, 2))})
             raw=p.read_bytes(); loaded=load_mmpd_mat(str(p), expected_sha256=hashlib.sha256(raw).hexdigest(), expected_bytes=len(raw)); self.assertEqual(loaded["video"].shape,(2,2,2,3)); self.assertEqual(loaded["gt_ppg"].shape,(2,))
 
     def test_hash_and_size(self):

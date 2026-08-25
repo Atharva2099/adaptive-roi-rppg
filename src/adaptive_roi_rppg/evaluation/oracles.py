@@ -7,13 +7,12 @@ from typing import Any, Mapping, Sequence
 
 from adaptive_roi_rppg.contracts import ROI_NAMES, canonical_json_bytes, sha256_file
 from adaptive_roi_rppg.contracts.errors import ContractValidationError
-from adaptive_roi_rppg.control import ControlState, control_step, initial_control_state
+from adaptive_roi_rppg.control import MIN_HOLD, ControlState, control_step, initial_control_state
 from adaptive_roi_rppg.labels.mcd import GT_RULE_ID
 
 ORACLE_SCHEMA = "gate7-mcd-oracle-shard-v2"
 ORACLE_REPORT_SCHEMA = "gate7-mcd-oracle-report-v2"
 ACTION_COUNT = len(ROI_NAMES)
-MIN_HOLD = 2
 ROW_FIELDS = (
     "dataset_id", "clip_id", "subject_id", "view", "condition", "hop_idx", "hop_time_s",
     "gt_hr_bpm", "gt_rule_id", "frame_provenance_id", "signal_config_id", "control_config_id",

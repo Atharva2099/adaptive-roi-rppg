@@ -12,6 +12,7 @@ from adaptive_roi_rppg.contracts import MeasurementFrame, ROI_NAMES, ROIMeasurem
 from adaptive_roi_rppg.contracts.errors import ContractValidationError
 
 _DT, _Q, _R0, _THRESHOLD, _MIN_HOLD = 1.0, 0.1, 200.0, 0.2, 2
+MIN_HOLD = _MIN_HOLD
 _ACTION_COUNT = len(ROI_NAMES)
 _FIELDS = tuple(f"roi_{roi.value}_{field}" for roi in ROI_NAMES for field in ("hr", "hr_delta", "confidence", "ppr", "coverage", "agreement", "valid")) + ("belief_mean", "belief_std", "belief_velocity", "hops_since_confident",) + tuple(f"previous_action_{i}" for i in range(_ACTION_COUNT)) + ("hold_count",)
 OBSERVATION_SCHEMA_ID = "observation-v1-101"
