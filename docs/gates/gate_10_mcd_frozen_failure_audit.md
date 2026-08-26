@@ -59,3 +59,33 @@ matching benchmark is absent or `AUDIT_WALLTIME_SECONDS` is insufficient.
 
 GPU use is out of scope. It requires a separate deterministic resource profile
 and a measured CPU case showing that the CPU profile is inadequate.
+
+## Verified Polaris dispatch smoke (2026-08-26)
+
+`FACT`: the scheduler-only smoke completed as Slurm job `48080` on Polaris
+`cputest`: one node, 16 tasks, one CPU per task, five-minute allocation, exit
+code `0:0`, and elapsed time `00:00:01`. All ranks `0` through `15` emitted
+one `NO_DATA_ACCESS` proof with `worker_count=16`.
+
+`FACT`: this was one `sbatch` allocation containing 16 `srun` tasks. It was
+accepted under the observed `simple-qos` limits; it was not treated as 16
+submitted jobs.
+
+`FACT`: Polaris did not export `SLURM_TIMELIMIT` to the batch script. The
+launcher was verified to obtain the allocated limit from `scontrol show job -o
+$SLURM_JOB_ID` instead. The smoke used the explicit supported interpreter
+`/Users/924254653/miniforge3/bin/python` (Python 3.13).
+
+`LIMITATION`: this validates dispatch, rank identity, QoS acceptance, and the
+Polaris runtime setup only. It did not open an MCD manifest, state vector,
+label, checkpoint, or MMPD path; it establishes no physiological or model
+result. `MaxRSS` was not reported for this short job.
+
+Artifacts on Polaris:
+
+- `/Users/924254653/adaptive_roi_mcd_failure/smoke/cputest_dispatch_64368f5/slurm-48080.out`
+- `/Users/924254653/adaptive_roi_mcd_failure/smoke/cputest_dispatch_64368f5/slurm-48080.err`
+
+Next: a one-worker, train-only `cpucluster` smoke must measure actual replay,
+POS construction, output size, and merge time before choosing 4, 8, or 16
+workers or submitting the held-out 533-clip audit.
