@@ -11,6 +11,7 @@ grep -Fq 'frozen worker assignment differs from requested W/batch' "$launcher"
 ! grep -Fq 'index % SLURM_NTASKS' "$launcher"
 grep -Fq 'MAX_SUBJECTS must be a positive integer' "$launcher"
 grep -Fq 'COMMON+=(--max-subjects "$MAX_SUBJECTS")' "$launcher"
+grep -Fq 'git", "-C", str(base), "ls-files", "-z"' "$launcher"
 grep -Fq 'SHARD_BATCH' "$launcher"
 # Logical shard count may exceed concurrent tasks; the persisted worker map
 # is the contract that binds each task to its deterministic shard list.
@@ -49,3 +50,20 @@ if env -u AUDIT_ROOT -u MANIFEST -u STATE -u GT -u CHECKPOINT_ROOT -u PLAN -u AU
   echo 'malformed scheduler TimeLimit unexpectedly accepted' >&2
   exit 1
 fi
+
+hash_repo="$smoke_tmp/hash-repo"
+mkdir -p "$hash_repo"
+git -C "$hash_repo" init -q
+git -C "$hash_repo" config user.email test@example.invalid
+git -C "$hash_repo" config user.name test
+printf 'tracked-v1\n' > "$hash_repo/source.py"
+git -C "$hash_repo" add source.py
+git -C "$hash_repo" commit -qm initial
+hash_function=$(awk '/^tracked_worktree_hash\(\)/ {on=1} on {print} /^}\s*$/ && on {exit}' "$launcher")
+hash_one=$(BASE="$hash_repo" PYTHON=python3 bash -c "$hash_function; tracked_worktree_hash")
+printf 'untracked smoke log\n' > "$hash_repo/smoke.log"
+hash_two=$(BASE="$hash_repo" PYTHON=python3 bash -c "$hash_function; tracked_worktree_hash")
+[[ "$hash_one" == "$hash_two" ]]
+printf 'tracked-v2\n' > "$hash_repo/source.py"
+hash_three=$(BASE="$hash_repo" PYTHON=python3 bash -c "$hash_function; tracked_worktree_hash")
+[[ "$hash_one" != "$hash_three" ]]

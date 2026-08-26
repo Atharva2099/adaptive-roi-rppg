@@ -50,6 +50,55 @@ unset PYTHONPATH; export PYTHONNOUSERSITE=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREA
 export PYTHONPATH="$BASE/src"
 PLAN=${PLAN:-"$BASE/configs/evaluation/mcd_frozen_models_v1.json"}
 SCRIPT="$BASE/scripts/run_mcd_frozen_failure_audit_v2.py"
+tracked_worktree_hash() {
+  "$PYTHON" - "$BASE" <<'PY'
+import hashlib
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+base = Path(sys.argv[1]).resolve()
+try:
+    raw = subprocess.run(
+        ["git", "-C", str(base), "ls-files", "-z"],
+        check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    ).stdout
+except (OSError, subprocess.CalledProcessError) as exc:
+    raise SystemExit("cannot list tracked Git files for code hash") from exc
+names = raw.split(b"\0")[:-1]
+if not names or raw and not raw.endswith(b"\0"):
+    raise SystemExit("tracked Git file list is malformed or empty")
+try:
+    ordered = sorted(names)
+except TypeError as exc:
+    raise SystemExit("tracked Git file list cannot be ordered") from exc
+if len(set(ordered)) != len(ordered):
+    raise SystemExit("tracked Git file list contains duplicates")
+digest = hashlib.sha256()
+for raw_name in ordered:
+    try:
+        name = raw_name.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise SystemExit("tracked Git path is not UTF-8") from exc
+    relative = Path(name)
+    if not name or relative.is_absolute() or ".." in relative.parts:
+        raise SystemExit("tracked Git path is unsafe")
+    path = (base / relative)
+    try:
+        resolved = path.resolve(strict=True)
+    except OSError as exc:
+        raise SystemExit("tracked Git path is missing") from exc
+    if base not in resolved.parents or path.is_symlink() or not path.is_file():
+        raise SystemExit("tracked Git path is outside, symlinked, or nonregular")
+    digest.update(raw_name + b"\0")
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    digest.update(b"\0")
+print(digest.hexdigest())
+PY
+}
 if [[ "$AUDIT_STAGE" == dispatch-smoke ]]; then
   # Scheduler-only proof: no manifest, checkpoint, frame, label, or output path.
   srun --ntasks="$W" --cpus-per-task=1 --exclusive bash -c 'exec "$1" "$2" --mode dispatch-smoke --run-id "$3" --code-snapshot-sha256 "$4" --audit-walltime-seconds "$5" --cpus-per-worker 1 --worker-count "$6" --allocated-task-count "$7" --worker-rank "$SLURM_PROCID"' _ "$PYTHON" "$SCRIPT" "$RUN_ID" "${DECLARED_CODE_SNAPSHOT_SHA256:-0000000000000000000000000000000000000000000000000000000000000000}" "$AUDIT_WALLTIME_SECONDS" "$W" "$SLURM_NTASKS"
@@ -58,22 +107,7 @@ fi
 : "${AUDIT_ROOT:?}"
 : "${MANIFEST:?}" "${STATE:?}" "${GT:?}" "${CHECKPOINT_ROOT:?}" "${DECLARED_CODE_SNAPSHOT_SHA256:?}" "${AUDIT_SPLIT:?}"
 [[ "$AUDIT_SPLIT" == train || "$AUDIT_SPLIT" == eval ]] || { echo 'AUDIT_SPLIT must be train or eval' >&2; exit 2; }
-CODE_HASH=$("$PYTHON" - "$BASE" <<'PY'
-import hashlib, sys
-from pathlib import Path
-base=Path(sys.argv[1]).resolve(); ignored={'.git','.venv','__pycache__'}; files=[]
-def walk(path):
- for entry in sorted(path.iterdir(), key=lambda p:p.name.encode()):
-  if entry.name in ignored: continue
-  if entry.is_symlink(): raise SystemExit('unexpected source symlink')
-  if entry.is_dir(): walk(entry)
-  elif entry.is_file() and entry.suffix != '.pyc': files.append(entry.relative_to(base))
-  else: raise SystemExit('unexpected source entry')
-walk(base); digest=hashlib.sha256()
-for item in files: digest.update(item.as_posix().encode()+b'\0'); digest.update((base/item).read_bytes()+b'\0')
-print(digest.hexdigest())
-PY
-)
+CODE_HASH=$(tracked_worktree_hash)
 [[ "$DECLARED_CODE_SNAPSHOT_SHA256" =~ ^[0-9a-f]{64}$ && "$CODE_HASH" == "$DECLARED_CODE_SNAPSHOT_SHA256" ]] || { echo 'declared code hash mismatch' >&2; exit 1; }
 COMMON=(--audit-root "$AUDIT_ROOT" --manifest-tree "$MANIFEST" --state-root "$STATE" --gt-root "$GT" --plan "$PLAN" --checkpoint-root "$CHECKPOINT_ROOT" --split "$AUDIT_SPLIT" --run-id "$RUN_ID" --code-snapshot-sha256 "$CODE_HASH" --audit-walltime-seconds "$AUDIT_WALLTIME_SECONDS" --cpus-per-worker 1 --worker-count "$W" --allocated-task-count "$SLURM_NTASKS")
 if [[ -n "${MAX_SUBJECTS:-}" ]]; then

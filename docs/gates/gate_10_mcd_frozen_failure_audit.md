@@ -18,6 +18,10 @@ identities, canonical 12-ROI order, expected hops, fixed random-control rule,
 and logical ownership. Slurm job IDs and attempt IDs are deliberately outside
 that identity.
 
+The launcher code hash is a deterministic NUL-delimited hash of the current
+working-tree bytes for Git-tracked files only, ordered by UTF-8 path bytes.
+Untracked scheduler smoke logs do not change it; tracked source changes do.
+
 Subject assignment is deterministic longest-processing-time balancing: sort
 subjects by expected authoritative hop work descending, subject ID ascending,
 then assign each to the least-loaded logical shard with shard-index tie break.
