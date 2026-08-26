@@ -11,14 +11,37 @@
 set -euo pipefail
 : "${BASE:?}" "${RUN_ID:?stable logical run id required}" "${AUDIT_STAGE:?plan|shards|merge required}"
 : "${AUDIT_WALLTIME_SECONDS:?explicit scheduler/requested seconds required}"
-: "${SLURM_TIMELIMIT:?allocated Slurm time limit is required}" "${SLURM_NTASKS:?allocated Slurm task count is required}"
+: "${SLURM_NTASKS:?allocated Slurm task count is required}"
 PYTHON=${PYTHON:-"$BASE/.venv/bin/python"}; [[ -x "$PYTHON" ]]
 [[ "$AUDIT_STAGE" == dispatch-smoke || "$AUDIT_STAGE" == plan || "$AUDIT_STAGE" == shards || "$AUDIT_STAGE" == merge ]] || { echo 'AUDIT_STAGE must be dispatch-smoke, plan, shards, or merge' >&2; exit 2; }
 [[ "$AUDIT_WALLTIME_SECONDS" =~ ^[1-9][0-9]*$ ]] || { echo 'AUDIT_WALLTIME_SECONDS must be positive seconds' >&2; exit 2; }
-# Slurm exports SLURM_TIMELIMIT in allocated minutes.  Do not accept an
-# operator-provided value above that allocation; nonnumeric values fail closed.
-[[ "$SLURM_TIMELIMIT" =~ ^[1-9][0-9]*$ && "$SLURM_NTASKS" =~ ^[1-9][0-9]*$ ]] || { echo 'cannot parse allocated Slurm limit/tasks' >&2; exit 2; }
-SCHEDULER_LIMIT_SECONDS=$((SLURM_TIMELIMIT * 60))
+# Slurm commonly exports a numeric minute limit, but Polaris job 48075 did
+# not.  Fall back only to the local authenticated scheduler record, never a
+# caller-provided walltime value.
+parse_scheduler_limit() {
+  local value=$1 days=0 hours=0 minutes=0 seconds=0
+  if [[ "$value" =~ ^([0-9]+)-([0-9]{1,2}):([0-9]{2}):([0-9]{2})$ ]]; then
+    days=${BASH_REMATCH[1]}; hours=${BASH_REMATCH[2]}; minutes=${BASH_REMATCH[3]}; seconds=${BASH_REMATCH[4]}
+  elif [[ "$value" =~ ^([0-9]{1,2}):([0-9]{2}):([0-9]{2})$ ]]; then
+    hours=${BASH_REMATCH[1]}; minutes=${BASH_REMATCH[2]}; seconds=${BASH_REMATCH[3]}
+  elif [[ "$value" =~ ^([0-9]+)$ ]]; then
+    minutes=${BASH_REMATCH[1]}
+  else
+    return 1
+  fi
+  (( minutes < 60 && seconds < 60 )) || return 1
+  printf '%s\n' "$(((((days * 24) + hours) * 60 + minutes) * 60 + seconds))"
+}
+if [[ -n "${SLURM_TIMELIMIT:-}" ]]; then
+  [[ "$SLURM_TIMELIMIT" =~ ^[1-9][0-9]*$ ]] || { echo 'cannot parse SLURM_TIMELIMIT minutes' >&2; exit 2; }
+  SCHEDULER_LIMIT_SECONDS=$((SLURM_TIMELIMIT * 60))
+else
+  : "${SLURM_JOB_ID:?SLURM_JOB_ID is required when SLURM_TIMELIMIT is absent}"
+  scheduler_line=$(scontrol show job -o "$SLURM_JOB_ID") || { echo 'cannot read allocated Slurm job record' >&2; exit 2; }
+  [[ "$scheduler_line" =~ (^|[[:space:]])TimeLimit=([^[:space:]]+) ]] || { echo 'allocated Slurm job record lacks TimeLimit' >&2; exit 2; }
+  SCHEDULER_LIMIT_SECONDS=$(parse_scheduler_limit "${BASH_REMATCH[2]}") || { echo 'cannot parse allocated Slurm TimeLimit' >&2; exit 2; }
+fi
+[[ "$SLURM_NTASKS" =~ ^[1-9][0-9]*$ ]] || { echo 'cannot parse allocated Slurm tasks' >&2; exit 2; }
 (( AUDIT_WALLTIME_SECONDS <= SCHEDULER_LIMIT_SECONDS )) || { echo 'AUDIT_WALLTIME_SECONDS exceeds allocated Slurm limit' >&2; exit 2; }
 W=${WORKERS:-${SLURM_NTASKS:-1}}
 [[ "$W" =~ ^[1-9][0-9]*$ ]] || { echo 'WORKERS must be positive' >&2; exit 2; }
