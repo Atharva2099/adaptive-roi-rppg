@@ -51,7 +51,6 @@ export PYTHONPATH="$BASE/src"
 PLAN=${PLAN:-"$BASE/configs/evaluation/mcd_frozen_models_v1.json"}
 SCRIPT="$BASE/scripts/run_mcd_frozen_failure_audit_v2.py"
 GIT_EXECUTABLE=${GIT_EXECUTABLE:-"$(command -v git || true)"}
-[[ "$GIT_EXECUTABLE" == /* && -x "$GIT_EXECUTABLE" && ! -L "$GIT_EXECUTABLE" ]] || { echo 'Git executable must be an absolute non-symlink executable' >&2; exit 2; }
 export GIT_EXECUTABLE
 tracked_worktree_hash() {
   "$PYTHON" - "$BASE" <<'PY'
@@ -63,18 +62,40 @@ from pathlib import Path
 
 base = Path(sys.argv[1]).resolve()
 git = Path(os.environ.get("GIT_EXECUTABLE", ""))
-if not git.is_absolute() or git.is_symlink() or not git.is_file() or not os.access(git, os.X_OK):
-    raise SystemExit("configured Git executable is unsafe")
-try:
-    raw = subprocess.run(
-        [str(git), "-C", str(base), "ls-files", "-z"],
-        check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-    ).stdout
-except (OSError, subprocess.CalledProcessError) as exc:
-    raise SystemExit("cannot list tracked Git files for code hash") from exc
-names = raw.split(b"\0")[:-1]
-if not names or raw and not raw.endswith(b"\0"):
-    raise SystemExit("tracked Git file list is malformed or empty")
+manifest_value = os.environ.get("TRACKED_FILES_MANIFEST", "")
+manifest = Path(manifest_value) if manifest_value else None
+if git.is_absolute() and not git.is_symlink() and git.is_file() and os.access(git, os.X_OK):
+    try:
+        raw = subprocess.run(
+            [str(git), "-C", str(base), "ls-files", "-z"],
+            check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        ).stdout
+    except (OSError, subprocess.CalledProcessError) as exc:
+        raise SystemExit("cannot list tracked Git files for code hash") from exc
+    names = raw.split(b"\0")[:-1]
+    if not names or not raw.endswith(b"\0"):
+        raise SystemExit("tracked Git file list is malformed or empty")
+else:
+    if manifest is None:
+        raise SystemExit("Git is unavailable and TRACKED_FILES_MANIFEST was not supplied")
+    if manifest.is_symlink() or not manifest.is_file():
+        raise SystemExit("tracked-files manifest must be a regular non-symlink file")
+    try:
+        raw = manifest.read_bytes()
+    except OSError as exc:
+        raise SystemExit("cannot read tracked-files manifest") from exc
+    if b"\0" in raw:
+        if not raw.endswith(b"\0"):
+            raise SystemExit("NUL tracked-files manifest must end with NUL")
+        names = raw.split(b"\0")[:-1]
+    else:
+        if not raw.endswith(b"\n"):
+            raise SystemExit("newline tracked-files manifest must end with newline")
+        names = raw.split(b"\n")[:-1]
+        if any(name.endswith(b"\r") for name in names):
+            raise SystemExit("newline tracked-files manifest must use LF separators")
+    if not names:
+        raise SystemExit("tracked-files manifest is empty")
 try:
     ordered = sorted(names)
 except TypeError as exc:

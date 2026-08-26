@@ -16,6 +16,8 @@ grep -Fq 'MAX_SUBJECTS must be a positive integer' "$launcher"
 grep -Fq 'COMMON+=(--max-subjects "$MAX_SUBJECTS")' "$launcher"
 grep -Fq 'GIT_EXECUTABLE=${GIT_EXECUTABLE:-"$(command -v git || true)"}' "$launcher"
 grep -Fq '[str(git), "-C", str(base), "ls-files", "-z"]' "$launcher"
+grep -Fq 'TRACKED_FILES_MANIFEST was not supplied' "$launcher"
+grep -Fq 'NUL tracked-files manifest must end with NUL' "$launcher"
 grep -Fq 'SHARD_BATCH' "$launcher"
 # Logical shard count may exceed concurrent tasks; the persisted worker map
 # is the contract that binds each task to its deterministic shard list.
@@ -82,5 +84,15 @@ mock_hash=$(BASE="$hash_repo" PYTHON="$hash_python" GIT_EXECUTABLE="$smoke_tmp/m
 [[ "$(cat "$smoke_tmp/git-use.log")" == 'mock git used' ]]
 if BASE="$hash_repo" PYTHON="$(command -v python3)" GIT_EXECUTABLE="$smoke_tmp/missing-git" bash -c "$hash_function; tracked_worktree_hash"; then
   echo 'missing configured Git executable unexpectedly accepted' >&2
+  exit 1
+fi
+printf 'source.py\n' > "$smoke_tmp/tracked-files.txt"
+manifest_hash=$(BASE="$hash_repo" PYTHON="$hash_python" GIT_EXECUTABLE="$smoke_tmp/missing-git" TRACKED_FILES_MANIFEST="$smoke_tmp/tracked-files.txt" bash -c "$hash_function; tracked_worktree_hash")
+[[ "$manifest_hash" == "$hash_three" ]]
+printf 'source.py\0' > "$smoke_tmp/tracked-files-nul"
+nul_manifest_hash=$(BASE="$hash_repo" PYTHON="$hash_python" GIT_EXECUTABLE="$smoke_tmp/missing-git" TRACKED_FILES_MANIFEST="$smoke_tmp/tracked-files-nul" bash -c "$hash_function; tracked_worktree_hash")
+[[ "$nul_manifest_hash" == "$hash_three" ]]
+if BASE="$hash_repo" PYTHON="$hash_python" GIT_EXECUTABLE="$smoke_tmp/missing-git" bash -c "$hash_function; tracked_worktree_hash"; then
+  echo 'missing tracked-files manifest unexpectedly accepted without Git' >&2
   exit 1
 fi
