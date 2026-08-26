@@ -9,6 +9,8 @@ grep -Fq 'WORKERS must satisfy 1 <= W <= SLURM_NTASKS' "$launcher"
 grep -Fq 'WORKER_MAP_TEXT' "$launcher"
 grep -Fq 'frozen worker assignment differs from requested W/batch' "$launcher"
 ! grep -Fq 'index % SLURM_NTASKS' "$launcher"
+grep -Fq 'MAX_SUBJECTS must be a positive integer' "$launcher"
+grep -Fq 'COMMON+=(--max-subjects "$MAX_SUBJECTS")' "$launcher"
 grep -Fq 'SHARD_BATCH' "$launcher"
 # Logical shard count may exceed concurrent tasks; the persisted worker map
 # is the contract that binds each task to its deterministic shard list.

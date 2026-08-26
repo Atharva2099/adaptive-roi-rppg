@@ -76,6 +76,10 @@ PY
 )
 [[ "$DECLARED_CODE_SNAPSHOT_SHA256" =~ ^[0-9a-f]{64}$ && "$CODE_HASH" == "$DECLARED_CODE_SNAPSHOT_SHA256" ]] || { echo 'declared code hash mismatch' >&2; exit 1; }
 COMMON=(--audit-root "$AUDIT_ROOT" --manifest-tree "$MANIFEST" --state-root "$STATE" --gt-root "$GT" --plan "$PLAN" --checkpoint-root "$CHECKPOINT_ROOT" --split "$AUDIT_SPLIT" --run-id "$RUN_ID" --code-snapshot-sha256 "$CODE_HASH" --audit-walltime-seconds "$AUDIT_WALLTIME_SECONDS" --cpus-per-worker 1 --worker-count "$W" --allocated-task-count "$SLURM_NTASKS")
+if [[ -n "${MAX_SUBJECTS:-}" ]]; then
+  [[ "$MAX_SUBJECTS" =~ ^[1-9][0-9]*$ ]] || { echo 'MAX_SUBJECTS must be a positive integer' >&2; exit 2; }
+  COMMON+=(--max-subjects "$MAX_SUBJECTS")
+fi
 if [[ "$AUDIT_STAGE" == plan ]]; then
   : "${LOGICAL_SHARDS:?plan requires LOGICAL_SHARDS}" "${SHARD_BATCH:?plan requires SHARD_BATCH}"
   "$PYTHON" "$SCRIPT" --mode plan "${COMMON[@]}" --logical-shards "$LOGICAL_SHARDS" --logical-shard-indices "$SHARD_BATCH"
