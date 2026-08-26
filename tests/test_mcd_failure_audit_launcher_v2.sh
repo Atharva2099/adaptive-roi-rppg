@@ -16,3 +16,17 @@ grep -Fq 'OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM
 grep -Fq -- '--mode plan' "$launcher"
 grep -Fq -- '--mode shards' "$launcher"
 grep -Fq -- '--mode merge' "$launcher"
+grep -Fq 'dispatch-smoke' "$launcher"
+grep -Fq 'Scheduler-only proof: no manifest, checkpoint, frame, label, or output path.' "$launcher"
+
+smoke_tmp=$(mktemp -d)
+trap 'rm -rf "$smoke_tmp"' EXIT
+mkdir -p "$smoke_tmp/base/.venv/bin" "$smoke_tmp/bin"
+ln -s "$(command -v python3)" "$smoke_tmp/base/.venv/bin/python"
+cat > "$smoke_tmp/bin/srun" <<'EOF'
+#!/bin/bash
+echo MOCK_SRUN_DISPATCH "$@"
+EOF
+chmod +x "$smoke_tmp/bin/srun"
+smoke_output=$(env -u AUDIT_ROOT -u MANIFEST -u STATE -u GT -u CHECKPOINT_ROOT -u PLAN -u AUDIT_PLAN -u AUDIT_SPLIT -u DECLARED_CODE_SNAPSHOT_SHA256 PATH="$smoke_tmp/bin:$PATH" BASE="$smoke_tmp/base" RUN_ID=dispatch-smoke-1 AUDIT_STAGE=dispatch-smoke AUDIT_WALLTIME_SECONDS=60 SLURM_TIMELIMIT=1 SLURM_NTASKS=2 WORKERS=2 bash "$launcher")
+[[ "$smoke_output" == *MOCK_SRUN_DISPATCH* ]]

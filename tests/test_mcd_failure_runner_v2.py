@@ -1,4 +1,7 @@
 import json
+import os
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -109,6 +112,16 @@ class RunnerV2Tests(unittest.TestCase):
             self.assertEqual(events, ["frames", "all-replays", "labels", "score", "score"])
         finally:
             runner.load_frozen_recurrent_policy, runner.read_mcd_canonical_frames, runner._replay_all_policies_without_labels, runner.read_mcd_labels, runner.score_replay_after_labels = saved
+
+    def test_dispatch_smoke_accepts_no_data_paths_and_rejects_them_if_supplied(self):
+        root = Path(__file__).resolve().parents[1]; script = root / "scripts" / "run_mcd_frozen_failure_audit_v2.py"; env = {**os.environ, "PYTHONPATH": str(root / "src")}
+        common = [sys.executable, str(script), "--mode", "dispatch-smoke", "--run-id", "smoke-1", "--code-snapshot-sha256", "a" * 64, "--audit-walltime-seconds", "60", "--worker-count", "2", "--allocated-task-count", "2", "--worker-rank", "1"]
+        result = subprocess.run(common, check=True, capture_output=True, text=True, env=env)
+        self.assertEqual(json.loads(result.stdout)["proof"], "NO_DATA_ACCESS")
+        rejected = subprocess.run([*common, "--manifest-tree", "must-not-be-opened"], capture_output=True, text=True, env=env)
+        self.assertNotEqual(rejected.returncode, 0)
+        rejected_benchmark = subprocess.run([*common, "--benchmark-record", "must-not-be-opened"], capture_output=True, text=True, env=env)
+        self.assertNotEqual(rejected_benchmark.returncode, 0)
 
     def test_streamed_output_round_trips_without_metadata_duplication(self):
         with tempfile.TemporaryDirectory() as temp:

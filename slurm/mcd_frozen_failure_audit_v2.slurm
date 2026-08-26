@@ -9,12 +9,11 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --time=02:00:00
 set -euo pipefail
-: "${BASE:?}" "${AUDIT_ROOT:?}" "${RUN_ID:?stable logical run id required}" "${AUDIT_STAGE:?plan|shards|merge required}"
-: "${MANIFEST:?}" "${STATE:?}" "${GT:?}" "${CHECKPOINT_ROOT:?}" "${DECLARED_CODE_SNAPSHOT_SHA256:?}" "${AUDIT_SPLIT:?}" "${AUDIT_WALLTIME_SECONDS:?explicit scheduler/requested seconds required}"
+: "${BASE:?}" "${RUN_ID:?stable logical run id required}" "${AUDIT_STAGE:?plan|shards|merge required}"
+: "${AUDIT_WALLTIME_SECONDS:?explicit scheduler/requested seconds required}"
 : "${SLURM_TIMELIMIT:?allocated Slurm time limit is required}" "${SLURM_NTASKS:?allocated Slurm task count is required}"
 PYTHON=${PYTHON:-"$BASE/.venv/bin/python"}; [[ -x "$PYTHON" ]]
-[[ "$AUDIT_SPLIT" == train || "$AUDIT_SPLIT" == eval ]] || { echo 'AUDIT_SPLIT must be train or eval' >&2; exit 2; }
-[[ "$AUDIT_STAGE" == plan || "$AUDIT_STAGE" == shards || "$AUDIT_STAGE" == merge ]] || { echo 'AUDIT_STAGE must be plan, shards, or merge' >&2; exit 2; }
+[[ "$AUDIT_STAGE" == dispatch-smoke || "$AUDIT_STAGE" == plan || "$AUDIT_STAGE" == shards || "$AUDIT_STAGE" == merge ]] || { echo 'AUDIT_STAGE must be dispatch-smoke, plan, shards, or merge' >&2; exit 2; }
 [[ "$AUDIT_WALLTIME_SECONDS" =~ ^[1-9][0-9]*$ ]] || { echo 'AUDIT_WALLTIME_SECONDS must be positive seconds' >&2; exit 2; }
 # Slurm exports SLURM_TIMELIMIT in allocated minutes.  Do not accept an
 # operator-provided value above that allocation; nonnumeric values fail closed.
@@ -27,6 +26,15 @@ W=${WORKERS:-${SLURM_NTASKS:-1}}
 unset PYTHONPATH; export PYTHONNOUSERSITE=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1
 export PYTHONPATH="$BASE/src"
 PLAN=${PLAN:-"$BASE/configs/evaluation/mcd_frozen_models_v1.json"}
+SCRIPT="$BASE/scripts/run_mcd_frozen_failure_audit_v2.py"
+if [[ "$AUDIT_STAGE" == dispatch-smoke ]]; then
+  # Scheduler-only proof: no manifest, checkpoint, frame, label, or output path.
+  srun --ntasks="$W" --cpus-per-task=1 --exclusive bash -c 'exec "$1" "$2" --mode dispatch-smoke --run-id "$3" --code-snapshot-sha256 "$4" --audit-walltime-seconds "$5" --cpus-per-worker 1 --worker-count "$6" --allocated-task-count "$7" --worker-rank "$SLURM_PROCID"' _ "$PYTHON" "$SCRIPT" "$RUN_ID" "${DECLARED_CODE_SNAPSHOT_SHA256:-0000000000000000000000000000000000000000000000000000000000000000}" "$AUDIT_WALLTIME_SECONDS" "$W" "$SLURM_NTASKS"
+  exit 0
+fi
+: "${AUDIT_ROOT:?}"
+: "${MANIFEST:?}" "${STATE:?}" "${GT:?}" "${CHECKPOINT_ROOT:?}" "${DECLARED_CODE_SNAPSHOT_SHA256:?}" "${AUDIT_SPLIT:?}"
+[[ "$AUDIT_SPLIT" == train || "$AUDIT_SPLIT" == eval ]] || { echo 'AUDIT_SPLIT must be train or eval' >&2; exit 2; }
 CODE_HASH=$("$PYTHON" - "$BASE" <<'PY'
 import hashlib, sys
 from pathlib import Path
@@ -45,7 +53,6 @@ PY
 )
 [[ "$DECLARED_CODE_SNAPSHOT_SHA256" =~ ^[0-9a-f]{64}$ && "$CODE_HASH" == "$DECLARED_CODE_SNAPSHOT_SHA256" ]] || { echo 'declared code hash mismatch' >&2; exit 1; }
 COMMON=(--audit-root "$AUDIT_ROOT" --manifest-tree "$MANIFEST" --state-root "$STATE" --gt-root "$GT" --plan "$PLAN" --checkpoint-root "$CHECKPOINT_ROOT" --split "$AUDIT_SPLIT" --run-id "$RUN_ID" --code-snapshot-sha256 "$CODE_HASH" --audit-walltime-seconds "$AUDIT_WALLTIME_SECONDS" --cpus-per-worker 1 --worker-count "$W" --allocated-task-count "$SLURM_NTASKS")
-SCRIPT="$BASE/scripts/run_mcd_frozen_failure_audit_v2.py"
 if [[ "$AUDIT_STAGE" == plan ]]; then
   : "${LOGICAL_SHARDS:?plan requires LOGICAL_SHARDS}" "${SHARD_BATCH:?plan requires SHARD_BATCH}"
   "$PYTHON" "$SCRIPT" --mode plan "${COMMON[@]}" --logical-shards "$LOGICAL_SHARDS" --logical-shard-indices "$SHARD_BATCH"
