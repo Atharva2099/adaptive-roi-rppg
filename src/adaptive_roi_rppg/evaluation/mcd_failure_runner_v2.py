@@ -179,8 +179,10 @@ def _pose(frames: Sequence[CanonicalFrame], measurement: MeasurementFrame) -> tu
     index = round(measurement.hop_time_s * frames[0].camera_fps) - 1
     if index < 0 or index >= len(frames): _fail("measurement has no source frame")
     frame = frames[index]
-    if any(value is None for value in (frame.head_yaw, frame.head_pitch, frame.head_roll)): return "unavailable_in_source", None, None, None
-    return "mcd_state_end_frame", float(frame.head_yaw), float(frame.head_pitch), float(frame.head_roll)
+    pose = (frame.head_yaw_deg, frame.head_pitch_deg, frame.head_roll_deg)
+    if all(value is None for value in pose): return "unavailable_in_source", None, None, None
+    if any(value is None for value in pose): _fail("canonical pose is partially missing")
+    return "mcd_state_end_frame", float(pose[0]), float(pose[1]), float(pose[2])
 @dataclass(frozen=True, slots=True)
 class _Replay: clip: Any; frame: MeasurementFrame; pose: tuple[str, float | None, float | None, float | None]; identity: Any; audit: Any; random_action: int
 def replay_measurements_without_labels(measurements: Sequence[MeasurementFrame], frames: Sequence[CanonicalFrame], policy: Any, clip: Any) -> tuple[_Replay, ...]:

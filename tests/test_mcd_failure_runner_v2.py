@@ -26,6 +26,13 @@ class RunnerV2Tests(unittest.TestCase):
         bad = dict(item); values = json.loads(bad["alternatives_json"]); values[-1]["requested_action"] = 10; bad["alternatives_json"] = json.dumps(values, sort_keys=True, separators=(",", ":"))
         with self.assertRaises(ContractValidationError): runner.validate_hop_rows([bad])
 
+    def test_pose_uses_degree_named_canonical_fields_and_preserves_all_missing(self):
+        finite = SimpleNamespace(camera_fps=30.0, head_yaw_deg=12.5, head_pitch_deg=-3.0, head_roll_deg=1.25)
+        missing = SimpleNamespace(camera_fps=30.0, head_yaw_deg=None, head_pitch_deg=None, head_roll_deg=None)
+        measurement = SimpleNamespace(hop_time_s=1 / 30)
+        self.assertEqual(runner._pose((finite,), measurement), ("mcd_state_end_frame", 12.5, -3.0, 1.25))
+        self.assertEqual(runner._pose((missing,), measurement), ("unavailable_in_source", None, None, None))
+
     def test_exact_coverage_rejects_missing_checkpoint_hop(self):
         identity = [{"method_id": "advantage_ppo_seed0", "family": "advantage_ppo", "seed": 0, "checkpoint_sha256": "a" * 64}]
         runner.validate_hop_rows([row(hop=0), row(hop=1)], {"clip-a": 2}, identity)
