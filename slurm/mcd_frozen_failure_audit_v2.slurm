@@ -50,6 +50,9 @@ unset PYTHONPATH; export PYTHONNOUSERSITE=1 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREA
 export PYTHONPATH="$BASE/src"
 PLAN=${PLAN:-"$BASE/configs/evaluation/mcd_frozen_models_v1.json"}
 SCRIPT="$BASE/scripts/run_mcd_frozen_failure_audit_v2.py"
+GIT_EXECUTABLE=${GIT_EXECUTABLE:-"$(command -v git || true)"}
+[[ "$GIT_EXECUTABLE" == /* && -x "$GIT_EXECUTABLE" && ! -L "$GIT_EXECUTABLE" ]] || { echo 'Git executable must be an absolute non-symlink executable' >&2; exit 2; }
+export GIT_EXECUTABLE
 tracked_worktree_hash() {
   "$PYTHON" - "$BASE" <<'PY'
 import hashlib
@@ -59,9 +62,12 @@ import sys
 from pathlib import Path
 
 base = Path(sys.argv[1]).resolve()
+git = Path(os.environ.get("GIT_EXECUTABLE", ""))
+if not git.is_absolute() or git.is_symlink() or not git.is_file() or not os.access(git, os.X_OK):
+    raise SystemExit("configured Git executable is unsafe")
 try:
     raw = subprocess.run(
-        ["git", "-C", str(base), "ls-files", "-z"],
+        [str(git), "-C", str(base), "ls-files", "-z"],
         check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
     ).stdout
 except (OSError, subprocess.CalledProcessError) as exc:
