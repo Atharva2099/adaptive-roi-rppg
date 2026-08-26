@@ -10,7 +10,8 @@ grep -Fq 'WORKER_MAP_TEXT' "$launcher"
 grep -Fq 'frozen worker assignment differs from requested W/batch' "$launcher"
 ! grep -Fq 'index % SLURM_NTASKS' "$launcher"
 grep -Fq 'SHARD_BATCH' "$launcher"
-grep -Fq 'task count == logical shard count' "$launcher"
+# Logical shard count may exceed concurrent tasks; the persisted worker map
+# is the contract that binds each task to its deterministic shard list.
 grep -Fq 'OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1' "$launcher"
 grep -Fq -- '--mode plan' "$launcher"
 grep -Fq -- '--mode shards' "$launcher"
