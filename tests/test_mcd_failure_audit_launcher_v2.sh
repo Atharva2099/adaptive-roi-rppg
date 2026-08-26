@@ -14,6 +14,14 @@ grep -Fq 'frozen worker assignment differs from requested W/batch' "$launcher"
 ! grep -Fq 'index % SLURM_NTASKS' "$launcher"
 grep -Fq 'MAX_SUBJECTS must be a positive integer' "$launcher"
 grep -Fq 'COMMON+=(--max-subjects "$MAX_SUBJECTS")' "$launcher"
+grep -Fq 'COMMON+=(--benchmark-record "$BENCHMARK_RECORD")' "$launcher"
+benchmark_append_line=$(grep -nF 'COMMON+=(--benchmark-record "$BENCHMARK_RECORD")' "$launcher" | cut -d: -f1)
+plan_branch_line=$(grep -nF 'if [[ "$AUDIT_STAGE" == plan ]]; then' "$launcher" | cut -d: -f1)
+audit_plan_required_line=$(grep -nF ': "${AUDIT_PLAN:?shards/merge requires AUDIT_PLAN}"' "$launcher" | cut -d: -f1)
+merge_branch_line=$(grep -nF 'if [[ "$AUDIT_STAGE" == merge ]]; then' "$launcher" | cut -d: -f1)
+(( benchmark_append_line < plan_branch_line ))
+(( benchmark_append_line < audit_plan_required_line ))
+(( benchmark_append_line < merge_branch_line ))
 grep -Fq 'GIT_EXECUTABLE=${GIT_EXECUTABLE:-"$(command -v git || true)"}' "$launcher"
 grep -Fq '[str(git), "-C", str(base), "ls-files", "-z"]' "$launcher"
 grep -Fq 'TRACKED_FILES_MANIFEST was not supplied' "$launcher"

@@ -137,6 +137,7 @@ fi
 CODE_HASH=$(tracked_worktree_hash)
 [[ "$DECLARED_CODE_SNAPSHOT_SHA256" =~ ^[0-9a-f]{64}$ && "$CODE_HASH" == "$DECLARED_CODE_SNAPSHOT_SHA256" ]] || { echo 'declared code hash mismatch' >&2; exit 1; }
 COMMON=(--audit-root "$AUDIT_ROOT" --manifest-tree "$MANIFEST" --state-root "$STATE" --gt-root "$GT" --plan "$PLAN" --checkpoint-root "$CHECKPOINT_ROOT" --split "$AUDIT_SPLIT" --run-id "$RUN_ID" --code-snapshot-sha256 "$CODE_HASH" --audit-walltime-seconds "$AUDIT_WALLTIME_SECONDS" --cpus-per-worker 1 --worker-count "$W" --allocated-task-count "$SLURM_NTASKS")
+if [[ -n "${BENCHMARK_RECORD:-}" ]]; then COMMON+=(--benchmark-record "$BENCHMARK_RECORD"); fi
 if [[ -n "${MAX_SUBJECTS:-}" ]]; then
   [[ "$MAX_SUBJECTS" =~ ^[1-9][0-9]*$ ]] || { echo 'MAX_SUBJECTS must be a positive integer' >&2; exit 2; }
   COMMON+=(--max-subjects "$MAX_SUBJECTS")
@@ -149,7 +150,6 @@ fi
 : "${AUDIT_PLAN:?shards/merge requires AUDIT_PLAN}"
 COMMON+=(--audit-plan "$AUDIT_PLAN")
 if [[ "$AUDIT_STAGE" == merge ]]; then
-  if [[ -n "${BENCHMARK_RECORD:-}" ]]; then COMMON+=(--benchmark-record "$BENCHMARK_RECORD"); fi
   if [[ -n "${BENCHMARK_OUTPUT:-}" ]]; then COMMON+=(--benchmark-output "$BENCHMARK_OUTPUT"); fi
   "$PYTHON" "$SCRIPT" --mode merge "${COMMON[@]}"
   exit 0
