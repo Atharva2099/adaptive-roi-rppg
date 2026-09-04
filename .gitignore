@@ -44,6 +44,7 @@ htmlcov/
 /results/
 /outputs/
 /artifacts/
+/docs/presentations/
 /checkpoints/
 /models/
 *.ckpt

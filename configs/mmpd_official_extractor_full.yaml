@@ -1,0 +1,39 @@
+# Path/cohort execution config for the unchanged official MMPD loader.
+BASE: ['']
+TOOLBOX_MODE: "unsupervised_method"
+UNSUPERVISED:
+  METHOD: []
+  METRICS: []
+  DATA:
+    INFO:
+      LIGHT: [1, 2, 3, 4]
+      MOTION: [1, 2, 3, 4]
+      EXERCISE: [1, 2]
+      SKIN_COLOR: [1, 2, 3, 4, 5, 6]
+      GENDER: [1, 2]
+      GLASSER: [1, 2]
+      HAIR_COVER: [1, 2]
+      MAKEUP: [1, 2]
+    FS: 30
+    DATASET: MMPD
+    DO_PREPROCESS: True
+    DATA_FORMAT: NDHWC
+    DATA_PATH: "/data/rPPG_dataset/mat_dataset"
+    CACHED_PATH: "/data/rPPG_dataset/processed_dataset"
+    EXP_DATA_NAME: "official_full"
+    BEGIN: 0.0
+    END: 1.0
+    PREPROCESS:
+      DATA_TYPE: [Raw]
+      LABEL_TYPE: Raw
+      DO_CHUNK: False
+      CHUNK_LENGTH: 180
+      DYNAMIC_DETECTION: False
+      DYNAMIC_DETECTION_FREQUENCY: 180
+      CROP_FACE: True
+      LARGE_FACE_BOX: True
+      LARGE_BOX_COEF: 1.5
+      H: 72
+      W: 72
+INFERENCE:
+  EVALUATION_METHOD: "FFT"

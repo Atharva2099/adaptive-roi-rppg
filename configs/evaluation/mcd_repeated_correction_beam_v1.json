@@ -1,0 +1,11 @@
+{
+  "schema": "mcd-repeated-correction-beam-v1",
+  "dataset_id": "mcd",
+  "selection": {"source": "frozen_worst54_mcd_replay_advantage_ppo", "clip_count": 54, "seeds": [0, 1, 2]},
+  "window_hops": 15,
+  "primary_width": 8,
+  "sensitivity_widths": [1, 2, 4, 8, 16, 32],
+  "ranking": "offline_gt_immediate_post_update_abs_error_then_action_index",
+  "retention": "cumulative_abs_error_then_endpoint_abs_error_then_executed_sequence_then_origin_sequence",
+  "scope": "MCD-only offline diagnostic. MMPD is not accessed. GT-informed rank-1 search is headroom only and cannot be used for training, tuning, rewards, checkpoint selection, or deployment."
+}

@@ -1,0 +1,24 @@
+{
+  "schema": "mcd-case-audit-v1",
+  "dataset_id": "mcd",
+  "seed": 1,
+  "source_job_id": "48193",
+  "selection_basis": "frozen v2 seed1 factual H15 error ranking",
+  "cases": [
+    {"clip_id": "9940_IriunWebcam_before", "role": "high_error"},
+    {"clip_id": "2651_USBVideo_after", "role": "high_error"},
+    {"clip_id": "9825_IriunWebcam_after", "role": "high_error"},
+    {"clip_id": "3448_USBVideo_after", "role": "median_control"}
+  ],
+  "required_arms": ["frozen_semantic_state", "raw_video_extraction", "advantage_ppo_seed1_replay"],
+  "observation_dim": 101,
+  "action_count": 12,
+  "raw_videos": {
+    "9940_IriunWebcam_before": {"locator": "9940_IriunWebcam_before.avi", "bytes": 17825792, "sha256": "476f871f9de58fc1aa6596f610b413e2f1a0ed54793674262b6f7918a86c1fdb"},
+    "2651_USBVideo_after": {"locator": "2651_USBVideo_after.avi", "bytes": 42729472, "sha256": "63565de1390e042d5ad6af81a6da89b96b880c1a4e10a8c82e865ff63a8be5cf"},
+    "9825_IriunWebcam_after": {"locator": "9825_IriunWebcam_after.avi", "bytes": 22282240, "sha256": "12ed38e2f5e6c1f3a9d77e90dacb9157c998dff10da56d13b9845e00b5652005"},
+    "3448_USBVideo_after": {"locator": "3448_USBVideo_after.avi", "bytes": 59506688, "sha256": "abf903da7bff3727e319c217794de1134d40569da9b9cb8353e1b63d567dea18"}
+  },
+  "rewards_logits_values": "not_saved_unavailable",
+  "scope": "MCD-only forensic diagnostic; no training, tuning, or checkpoint selection."
+}

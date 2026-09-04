@@ -1,0 +1,21 @@
+# Authoritative strict-extractor failures from gate_09_engineering_run_20260821_failure.md.
+p10_15
+p10_3
+p11_1
+p11_3
+p17_11
+p17_17
+p17_3
+p17_7
+p17_9
+p1_17
+p1_9
+p20_1
+p20_17
+p20_5
+p20_9
+p25_3
+p7_1
+p7_17
+p7_5
+p7_9

@@ -1,0 +1,14 @@
+{
+  "schema": "mcd-long-term-regret-v1",
+  "dataset_id": "mcd",
+  "source_metric": "abs_error_bpm",
+  "family": "advantage_ppo",
+  "seeds": [0, 1, 2],
+  "expected_clip_count": 533,
+  "expected_subject_count": 89,
+  "selected_clip_count": 54,
+  "horizons": [1, 5, 15],
+  "minimum_remaining_hops": 15,
+  "bootstrap": {"replicates": 10000, "unit": "subject", "aggregation": "anchor_to_clip_mean_then_equal_clips_within_subject"},
+  "scope": "MCD-only conditional diagnostic; MMPD is evaluation-only and is not accessed. No training, reward, checkpoint, or hyperparameter selection is permitted."
+}

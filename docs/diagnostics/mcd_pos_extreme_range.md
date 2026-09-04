@@ -1,5 +1,7 @@
 # MCD ROI POS extreme-range diagnostic
 
+Analysis date: 2026-09-01. Source evaluation date: 2026-08-26. Last numerical verification: 2026-09-01 (America/Los_Angeles).
+
 This note records numerical comparisons between the ground-truth (GT) heart rate and the lowest and highest recovered ROI POS heart-rate estimates. It also records a separate matched comparison of fixed full-face POS and three frozen model families. The two analyses use different jobs and are not combined into one metric.
 
 ## Candidate-range question and definitions

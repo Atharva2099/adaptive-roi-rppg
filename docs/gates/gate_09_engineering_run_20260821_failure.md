@@ -457,22 +457,96 @@ are now fully solved.
 
 ## Official MMPD preprocessing as a separate comparison
 
-The official MMPD preprocessing is a comparison ruler, not our current
-solution and not a source of tuning decisions. The reviewed references are
+The official MMPD preprocessing is now wired as a separate comparison run,
+not our current extractor and not a source of tuning decisions. The pinned
+public source is the immutable checkout at
+`/private/tmp/mmpd_official_repo_review_20260824` (commit
+`b88d2e248cf4d0b362c90492d189d7bd68ae85e7`); the Polaris run uses the matching
+upstream checkout at `/Users/924254653/mmpd_official_extractor_20260825/upstream`.
+The reviewed references are
 the paper at `/Users/atharva/Desktop/RL for RoI/Master Thesis/Useful papers/MMPD Dataset details.pdf`,
 the [official repository](https://github.com/THU-CS-PI/MMPD_rPPG_dataset), its
 [BaseLoader implementation](https://github.com/THU-CS-PI/MMPD_rPPG_dataset/blob/main/rppg-Toolbox_MMPD/dataset/data_loader/BaseLoader.py),
 and its [unsupervised inference configuration](https://github.com/THU-CS-PI/MMPD_rPPG_dataset/blob/main/rppg-Toolbox_MMPD/configs/infer_configs/MMPD_UNSUPERVISED.yaml).
 
-That reference uses OpenCV Haar detection on the first frame, expands the box
-by 1.5 times, resizes to 72x72, and keeps a fixed crop. If no face is found,
-processing continues with a broad fallback crop. Continuing processing does
-not establish that the fallback contains facial pixels or that its POS signal
-is valid. No per-clip failed/exclusion list was found in the reviewed
-paper/repository; condition-level subset exclusions do exist. This comparison
-is useful for protocol documentation, but it does not validate the current
-strict extractor or justify silently excluding failures. See
-`docs/evaluation_protocol.md` for the evaluation-only reporting boundary.
+The external driver imports the official `config.get_config`, instantiates
+the official `MMPDLoader`, and lets `BaseLoader.preprocess` call the unchanged
+`face_crop_resize` and `face_detection`. With `DYNAMIC_DETECTION=False`, the
+first-frame Haar box is reused for the full clip; the box is expanded 1.5x and
+the crop is resized to 72x72. A no-face detection logs an error and uses the
+full frame. A completed cache file therefore does not prove valid face pixels.
+The driver reports input/label pair count, shapes, finite status, and the
+official file-list path; it does not report face validity. The only
+adaptations are the external driver, path/cohort config files, and bwrap path
+bindings. Official source is not copied into `src/` or edited.
+
+Before each submission, the Polaris login node checks the expected official
+Git revision and a clean tracked worktree. The compute-time driver does not
+invoke Git because the CPU nodes need not provide it. It records the installed
+SciPy version and whether the narrow compatibility shim was applied. The shim only adds an
+inert `scipy.__config__.get_info` callable when the pinned loader's legacy
+import is unavailable; the official face-processing code is not changed.
+The driver fails closed on unexpected pair/subject counts, duplicate cache
+paths or clip keys, missing input/label files, non-`[T,72,72,3]` inputs,
+length-mismatched labels, or non-finite values.
+
+The initial one-subject smoke completed on Polaris as job `48047`: 20 cache
+pairs, each `[1800,72,72,3]`, with matching labels and finite values. Its crop
+sheet showed the central limitation directly: a person moving outside the
+first-frame box produces background or black pixels, but the official loader
+still writes a normal-looking array. The launcher runs inspection inside the
+same minimal bwrap namespace so
+official `/data` file-list paths remain valid. These are path/cohort and
+runtime-compatibility adaptations only: the namespace exposes the required
+system directories read-only, creates `/data/rPPG_dataset`, binds the
+official toolbox and raw root read-only, and binds cache and report parents
+writable. Both configs keep the official
+extraction parameters and broad metadata filters. The sequence and results
+are planned until the Polaris smoke, visual inspection, and full run
+complete. Outputs remain outside Git. This is MMPD evaluation-only comparison
+evidence, not training, tuning, calibration, checkpoint selection, or a
+generalization claim. The official fallback has no face-validity guarantee.
+See `docs/evaluation_protocol.md` for the evaluation-only reporting boundary.
+
+Execution note (2026-08-25): Polaris smoke job `48042` failed before opening
+raw data because the official-source preflight could not resolve `git` inside
+bubblewrap (`FileNotFoundError: [Errno 2] No such file or directory: 'git'`).
+
+Targeted follow-up (2026-08-25): before any 300-clip run, the external harness
+now supports an exact plain-text `--clip-list`. The dedicated
+`configs/mmpd_official_extractor_failure20.yaml` namespace and
+`slurm/mmpd_official_extractor_failure20.slurm` path select the 20 IDs above.
+The harness subclass calls the official `MMPDLoader.get_raw_data` and filters
+its returned entries by exact subject/index before `BaseLoader` preprocessing;
+the official crop, detection, and preprocessing source is unchanged. The
+requested IDs are validated for syntax, duplicates, missing entries, and exact
+post-loader identity plus output cardinality, and the inspector renders all 20
+as an explicitly unmapped cache collection when the list is passed. The
+failure20 launcher mounts its isolated host cache at the config’s
+`/data/rPPG_dataset/processed_dataset_failure20` path.
+This is a diagnostic only and does not copy or stage MMPD raw files.
+
+Result (2026-08-25): Polaris job `48057` completed the exact 20 unresolved
+strict-extractor clips. The harness selected all requested raw files before
+official preprocessing, produced 20 cache pairs across seven subjects, and
+each pair contained all 1,800 frames with finite RGB and matching labels. This
+means the official loader did not skip a requested clip, drop frames, or pad
+frames with an earlier image. It does **not** mean every crop contains a face:
+the official method detects once at the beginning, reuses that rectangle for
+the clip, and never marks later off-face or black crops invalid.
+
+### What this comparison can and cannot do
+
+The official output is a full-frame `72x72` RGB video for each clip. Our
+current evaluator does not accept full-face video tensors at any image size.
+It requires per-frame mean RGB values from 12 named semantic skin ROIs, which
+our current MediaPipe extractor obtains from the original frame. Feeding the
+official crops through another ROI extractor would create a new hybrid
+pipeline, not reproduce either method, and cannot restore face pixels missing
+from an off-face crop. Therefore the official OpenCV run is useful only to
+understand and report the dataset authors' preprocessing behavior. It is not
+an input to the current policy evaluation and does not solve the remaining
+strict-extraction failures.
 
 ## Next plan
 

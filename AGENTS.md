@@ -41,6 +41,8 @@ Do not run the diagnostic until the comparison is fair and the result that would
 
 ## Implementation and engineering discipline
 
+- During debugging and experiment work, start with the observed behavior and trace the actual data/code path to a fix. Treat project labels, run markers, hashes, and protective framework code as background metadata; do not introduce, foreground, or discuss them unless they directly help solve the current technical problem.
+- Do not use gates, SHA checks, lifecycle markers, or custom save guards as the main way to reason about or report work. Use them only when the user explicitly asks, or when a concrete failure requires them. Prefer direct inspection of code, data, visuals, logs, scheduler status, and actual outputs.
 - Follow the implementation order and acceptance gates in `docs/system_design.md`. No training is allowed until gates 1-6 pass.
 - Keep the repository small. Production code belongs under `src/`; launchers belong under `scripts/` or `slurm/`.
 - Prefer the smallest clear implementation that satisfies the current gate. Do not add speculative frameworks, duplicate validators, compatibility layers, configuration systems, or production-scale abstractions without a demonstrated current need.
