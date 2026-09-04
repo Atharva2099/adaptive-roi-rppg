@@ -62,7 +62,7 @@ class Gate61Tests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory); shard = root / "shard"; destination = root / "merged"
             dummy = _rows()
-            publish_crossover_shard(dummy, shard, shard_index=0, shard_count=1, code_snapshot_sha256="a" * 64, source_inventory_sha256="b" * 64, command="test", node="node", job_id="job", subject_ids=["s"])
+            self.assertIsNone(publish_crossover_shard(dummy, shard, shard_index=0, shard_count=1, code_snapshot_sha256="a" * 64, source_inventory_sha256="b" * 64, command="test", node="node", job_id="job", subject_ids=["s"]))
             (shard / "shard.json").write_text("tampered", encoding="utf-8")
             with self.assertRaises(ContractValidationError): merge_crossover_shards([shard], destination, bootstrap_replicates=5)
             self.assertEqual({p.name for p in destination.iterdir()}, {"STARTED.json", "FAILED.json"})

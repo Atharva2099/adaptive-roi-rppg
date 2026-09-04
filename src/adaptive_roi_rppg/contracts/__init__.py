@@ -8,7 +8,7 @@ from .constants import (
     ROI_NAMES,
 )
 from .errors import ContractValidationError
-from .io import canonical_json_bytes, read_json_object, sha256_file, verify_file_sha256, write_json_atomic
+from .io import canonical_json_bytes, publish_directory, read_json_object, sha256_file, verify_file_sha256, write_json_atomic
 from .manifests import (
     ClipManifest,
     DatasetManifest,
@@ -44,6 +44,7 @@ __all__ = [
     "RunInputManifest",
     "SplitManifest",
     "canonical_json_bytes",
+    "publish_directory",
     "read_json_object",
     "require_structurally_complete",
     "sha256_file",

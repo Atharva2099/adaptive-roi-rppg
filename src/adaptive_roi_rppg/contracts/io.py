@@ -6,7 +6,7 @@ import os
 import tempfile
 from enum import Enum
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping, Sequence
 
 from .errors import ContractValidationError
 
@@ -122,3 +122,55 @@ def write_json_atomic(path: str | os.PathLike[str], payload: Any, *, overwrite: 
                 Path(temp_name).unlink()
             except FileNotFoundError:
                 pass
+
+
+def publish_directory(
+    destination: str | os.PathLike[str],
+    *,
+    write_started: Callable[[Path], None],
+    write_artifacts: Callable[[Path], None],
+    validate_precomplete: Callable[[Path], None],
+    write_complete: Callable[[Path], None],
+    write_failed: Callable[[Path], None],
+    substantive_files: Sequence[str],
+) -> Path:
+    """Run the common fresh-directory publication lifecycle.
+
+    Domain callbacks own marker payloads and artifact validation.  This helper
+    only defines the filesystem ordering and failure cleanup: STARTED first,
+    COMPLETE last, and partial substantive artifacts are removed before a
+    best-effort FAILED marker is recorded.  The original exception is always
+    re-raised.
+    """
+    root = Path(destination)
+    if root.exists() or root.is_symlink():
+        raise ContractValidationError(f"path: refusing to overwrite {root}")
+    if root.parent.is_symlink() or not root.parent.is_dir():
+        raise ContractValidationError("path: parent directory must be an existing real directory")
+    try:
+        root.mkdir()
+    except FileExistsError as exc:
+        raise ContractValidationError(f"path: destination appeared during publication: {root}") from exc
+    write_started(root)
+    try:
+        write_artifacts(root)
+        validate_precomplete(root)
+        write_complete(root)
+        return root
+    except Exception:
+        # Do not let cleanup or marker-writing hide the publication failure.
+        if (root / "COMPLETE.json").exists():
+            raise
+        for name in substantive_files:
+            path = root / name
+            try:
+                if path.is_file() or path.is_symlink():
+                    path.unlink()
+            except OSError:
+                pass
+        try:
+            if not (root / "COMPLETE.json").exists():
+                write_failed(root)
+        except Exception:
+            pass
+        raise

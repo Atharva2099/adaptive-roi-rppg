@@ -22,7 +22,14 @@ The first action is free and sets hold to 1. Staying increments hold. A switch b
 
 ```text
 PYTHONPATH=src python3 -m unittest discover -s tests -v
-PYTHONPATH=src python3 scripts/verify_gate4_mcd_smoke.py --manifest-tree ... --state-root ... --output-dir ... --code-snapshot-sha256 <64 lowercase hex>  # Slurm only
+```
+
+The Gate 4 smoke runner was retired from current HEAD after gate acceptance.
+To reproduce the accepted run, check out (or create a worktree at) historical
+commit `feecad9`, then run this Slurm-only command there:
+
+```text
+PYTHONPATH=src python3 scripts/verify_gate4_mcd_smoke.py --manifest-tree ... --state-root ... --output-dir ... --code-snapshot-sha256 <64 lowercase hex>
 ```
 
 The smoke requires Slurm metadata, authenticates the Gate 2 bundle, reads only Gate 3 state/POS measurements, and records canonical transition hashes. It runs the first train subject's six clips twice for fixed action 0 and `hop_idx % 12`. Because those six clips had no selected invalid measurements, a bounded sorted search added `1024_USBVideo_after` as the seventh accepted clip. It does not open labels or calculate HR error.

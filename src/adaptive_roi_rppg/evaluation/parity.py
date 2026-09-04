@@ -17,7 +17,7 @@ from typing import Any, Mapping
 
 import numpy as np
 
-from adaptive_roi_rppg.contracts import canonical_json_bytes, read_json_object, sha256_file
+from adaptive_roi_rppg.contracts import canonical_json_bytes, publish_directory, read_json_object, sha256_file
 from adaptive_roi_rppg.contracts.errors import ContractValidationError
 from adaptive_roi_rppg.control import CONTROL_CONFIG_ID, belief_step, control_step, initial_control_state
 from adaptive_roi_rppg.data.mcd import MCD_DATASET_ID, load_mcd_manifest_tree, read_mcd_canonical_frames
@@ -222,35 +222,26 @@ def _write_csv(path, fields, rows):
     with path.open("x", newline="", encoding="utf-8") as handle: csv.DictWriter(handle, fieldnames=fields, extrasaction="raise").writeheader(); csv.DictWriter(handle, fieldnames=fields, extrasaction="raise").writerows(rows)
 
 def publish_gate6_report(result, destination):
-    root = Path(destination)
-    if root.exists() or root.is_symlink() or not root.parent.is_dir() or root.parent.is_symlink(): _fail("destination must be fresh with a real parent")
-    root.mkdir(); run_id = result.get("run_id", "gate6"); plan = result.get("plan"); plan_id = plan.plan_id if isinstance(plan, Gate6ParityPlan) else result.get("plan_id", "gate6"); hops, clips = list(result.get("hop_rows", ())), list(result.get("clip_rows", ()))
-    try:
-        # STARTED is the first publication marker. Every later failure is
-        # recoverable by a reader as incomplete unless COMPLETE exists.
-        with (root / "STARTED.json").open("x") as h: json.dump({"state": "started", "run_id": run_id, "plan_id": plan_id}, h, sort_keys=True)
+    run_id = result.get("run_id", "gate6"); plan = result.get("plan"); plan_id = plan.plan_id if isinstance(plan, Gate6ParityPlan) else result.get("plan_id", "gate6"); hops, clips = list(result.get("hop_rows", ())), list(result.get("clip_rows", ()))
+    def write_artifacts(path):
         if not hops or not clips or any(r.get("discrepancy_category") in ("unclassified", None) for r in hops): _fail("Gate 6 requires nonempty rows and no unclassified rows")
         diagnostics = result.get("diagnostics", {}); inv = result.get("source_inventory", {}); inv_sha = result.get("source_inventory_sha256", "") or hashlib.sha256(canonical_json_bytes(inv)).hexdigest()
         if diagnostics.get("causal_decomposition_status") != "not_supported_by_frozen_inputs" or not inv: _fail("Gate 6 accepted limitation/source inventory is missing")
-        _write_csv(root / "parity_per_hop.csv", PARITY_HOP_FIELDS, hops); _write_csv(root / "parity_per_clip.csv", PARITY_CLIP_FIELDS, clips); subject, category, summary = summarize_gate6_rows(hops, clips)
-        _write_csv(root / "parity_by_subject.csv", ("subject_id", "clip_count", "mean_clip_mae"), subject); _write_csv(root / "parity_by_category.csv", ("discrepancy_category", "hop_count"), category)
+        _write_csv(path / "parity_per_hop.csv", PARITY_HOP_FIELDS, hops); _write_csv(path / "parity_per_clip.csv", PARITY_CLIP_FIELDS, clips); subject, category, summary = summarize_gate6_rows(hops, clips)
+        _write_csv(path / "parity_by_subject.csv", ("subject_id", "clip_count", "mean_clip_mae"), subject); _write_csv(path / "parity_by_category.csv", ("discrepancy_category", "hop_count"), category)
         summary.update({"run_id": run_id, "plan_id": plan_id, "dataset_id": result.get("dataset_id", MCD_DATASET_ID), "phase": result.get("phase", "unknown"), "causal_decomposition_status": diagnostics["causal_decomposition_status"], "source_inventory_sha256": inv_sha})
-        (root / "parity_summary.json").write_text(json.dumps(summary, sort_keys=True, separators=(",", ":")), encoding="utf-8")
-        (root / "plan.json").write_text(json.dumps(result.get("plan_payload", {}), sort_keys=True, separators=(",", ":")), encoding="utf-8")
-        manifest = {"state": "complete", "run_id": run_id, "plan_id": plan_id, "source_inventory_sha256": inv_sha, "sources": inv, "diagnostics": diagnostics}; (root / "run_manifest.json").write_text(json.dumps(manifest, sort_keys=True, separators=(",", ":")), encoding="utf-8")
-        (root / "source_inventory.json").write_bytes(canonical_json_bytes(inv))
-        (root / "artifacts.sha256").write_text("".join(f"{sha256_file(root / n)}  {n}\n" for n in _OUTPUTS[:-1]), encoding="utf-8"); _verify_gate6_tree(root, False)
-        with (root / "COMPLETE.json").open("x") as h: json.dump({"state": "complete", "run_id": run_id, "plan_id": plan_id}, h, sort_keys=True)
-        _verify_gate6_tree(root, True)
-    except Exception:
-        # Never leave contradictory terminal markers. COMPLETE is only
-        # written after the non-complete tree has passed verification.
-        if (root / "COMPLETE.json").exists():
-            raise
-        try:
-            with (root / "FAILED.json").open("x") as h: json.dump({"state": "failed", "run_id": run_id, "plan_id": plan_id}, h, sort_keys=True)
-        except FileExistsError: pass
-        raise
+        (path / "parity_summary.json").write_text(json.dumps(summary, sort_keys=True, separators=(",", ":")), encoding="utf-8")
+        (path / "plan.json").write_text(json.dumps(result.get("plan_payload", {}), sort_keys=True, separators=(",", ":")), encoding="utf-8")
+        manifest = {"state": "complete", "run_id": run_id, "plan_id": plan_id, "source_inventory_sha256": inv_sha, "sources": inv, "diagnostics": diagnostics}; (path / "run_manifest.json").write_text(json.dumps(manifest, sort_keys=True, separators=(",", ":")), encoding="utf-8")
+        (path / "source_inventory.json").write_bytes(canonical_json_bytes(inv))
+        (path / "artifacts.sha256").write_text("".join(f"{sha256_file(path / n)}  {n}\n" for n in _OUTPUTS[:-1]), encoding="utf-8")
+    def write_marker(path, state):
+        with (path / f"{state}.json").open("x") as handle:
+            json.dump({"state": state.lower(), "run_id": run_id, "plan_id": plan_id}, handle, sort_keys=True)
+    publish_directory(destination, write_started=lambda path: write_marker(path, "STARTED"), write_artifacts=write_artifacts,
+                      validate_precomplete=lambda path: _verify_gate6_tree(path, False),
+                      write_complete=lambda path: write_marker(path, "COMPLETE"),
+                      write_failed=lambda path: write_marker(path, "FAILED"), substantive_files=_OUTPUTS)
 
 def _verify_gate6_tree(destination, require_complete):
     root = Path(destination); expected = set(_OUTPUTS) | {"STARTED.json"} | ({"COMPLETE.json"} if require_complete else set())
