@@ -202,12 +202,5 @@ def validate_aggregation(rows: Mapping[str, Sequence[Mapping[str, Any]]], aggreg
         _fail("oracle aggregation does not match hop rows")
 
 
-def write_json_with_hash(path: str, payload: Mapping[str, Any]) -> str:
-    from pathlib import Path
-    target = Path(path)
-    target.write_text(__import__("json").dumps(payload, sort_keys=True, separators=(",", ":")), encoding="utf-8")
-    return sha256_file(target)
-
-
 __all__ = ["ORACLE_SCHEMA", "ORACLE_REPORT_SCHEMA", "ROW_FIELDS", "legal_actions", "replay_action_sequence",
-           "run_oracle_clip", "evaluate_oracle_shard", "aggregate_report", "validate_aggregation", "write_json_with_hash"]
+           "run_oracle_clip", "evaluate_oracle_shard", "aggregate_report", "validate_aggregation"]

@@ -9,6 +9,7 @@ from adaptive_roi_rppg.contracts.constants import ManifestStatus, OverlapResult
 from adaptive_roi_rppg.contracts.errors import ContractValidationError
 from adaptive_roi_rppg.contracts.io import (
     canonical_json_bytes,
+    publish_directory,
     read_json_object,
     sha256_file,
     verify_file_sha256,
@@ -45,6 +46,46 @@ def run_input(status=ManifestStatus.complete):
 
 
 class ManifestTests(unittest.TestCase):
+    def test_shared_publication_lifecycle(self):
+        with tempfile.TemporaryDirectory() as temp:
+            parent = Path(temp); events = []
+            def run(name, artifact_error=None, complete_error=None, failed_error=None, signal=None):
+                destination = parent / name
+                def started(root): events.append("started"); (root / "STARTED.json").write_text("started")
+                def artifacts(root):
+                    events.append("artifacts"); (root / "result.json").write_text("result")
+                    if artifact_error: raise artifact_error
+                def complete(root):
+                    events.append("complete"); (root / "COMPLETE.json").write_text("complete")
+                    if complete_error: raise complete_error
+                def failed(root):
+                    events.append("failed"); (root / "FAILED.json").write_text("failed")
+                    if failed_error: raise failed_error
+                kwargs = dict(destination=destination, write_started=started, write_artifacts=artifacts,
+                              validate_precomplete=lambda root: events.append("validate"), write_complete=complete,
+                              write_failed=failed, substantive_files=("result.json",))
+                if signal is not None:
+                    with self.assertRaises(signal): publish_directory(**kwargs)
+                else:
+                    return publish_directory(**kwargs)
+                return destination
+            output = run("success")
+            self.assertEqual(events[-3:], ["artifacts", "validate", "complete"])
+            self.assertTrue((output / "COMPLETE.json").is_file())
+            with self.assertRaisesRegex(ValueError, "artifact"):
+                run("failure", artifact_error=ValueError("artifact"))
+            self.assertEqual({p.name for p in (parent / "failure").iterdir()}, {"STARTED.json", "FAILED.json"})
+            with self.assertRaisesRegex(ValueError, "original"):
+                run("failed-marker", artifact_error=ValueError("original"), failed_error=OSError("marker"))
+            with self.assertRaisesRegex(ValueError, "complete"):
+                run("complete-raises", complete_error=ValueError("complete"))
+            self.assertEqual({p.name for p in (parent / "complete-raises").iterdir()}, {"STARTED.json", "result.json", "COMPLETE.json"})
+            for kind in (KeyboardInterrupt, SystemExit):
+                output = run(kind.__name__, artifact_error=kind("interrupt"), signal=kind)
+                self.assertEqual({p.name for p in output.iterdir()}, {"STARTED.json", "result.json"})
+            with self.assertRaises(ContractValidationError):
+                run("success")
+
     def test_round_trips_and_optional_gt_triplet(self):
         for value in (clip(), split(), dataset(), run_input()):
             self.assertEqual(type(value).from_dict(value.to_dict()), value)

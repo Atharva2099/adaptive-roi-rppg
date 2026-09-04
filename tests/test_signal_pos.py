@@ -4,7 +4,6 @@ import hashlib
 import io
 import math
 import os
-import subprocess
 import tempfile
 import unittest
 from contextlib import nullcontext
@@ -297,12 +296,6 @@ class Gate3Tests(unittest.TestCase):
             if isinstance(node, (ast.Import, ast.ImportFrom)):
                 name = ".".join(alias.name for alias in node.names) if isinstance(node, ast.Import) else node.module or ""
                 self.assertFalse(any(token in name.lower() for token in forbidden), name)
-
-    def test_smoke_requires_snapshot_and_slurm_metadata(self):
-        script = Path(__file__).parents[1] / "scripts" / "verify_gate3_mcd_smoke.py"
-        env = dict(os.environ); env.pop("SLURM_JOB_ID", None); env.pop("SLURMD_NODENAME", None)
-        result = subprocess.run(["python3", str(script), "--manifest-tree", "missing", "--state-root", "missing", "--output-dir", tempfile.gettempdir(), "--code-snapshot-sha256", "0" * 64], env=env, capture_output=True, text=True)
-        self.assertNotEqual(result.returncode, 0); self.assertIn("SLURM_JOB_ID", result.stderr + result.stdout)
 
 
 if __name__ == "__main__": unittest.main()

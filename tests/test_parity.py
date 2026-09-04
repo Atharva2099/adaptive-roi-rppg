@@ -65,7 +65,7 @@ class Gate6ReplayTests(unittest.TestCase):
         clip = {field: 0 for field in PARITY_CLIP_FIELDS}; clip.update({"run_id": "r", "plan_id": "p", "dataset_id": "mcd", "clip_id": "c", "subject_id": "s", "view": "Frontal", "condition": "before", "expected_hops": 1, "joined_hops": 1, "fixture_member": True, "clip_status": "complete"})
         with tempfile.TemporaryDirectory() as directory:
             destination = Path(directory) / "out"
-            publish_gate6_report({"run_id": "r", "plan_id": "p", "dataset_id": "mcd", "phase": "fixture", "hop_rows": [hop], "clip_rows": [clip], "subject_rows": [], "category_rows": [], "plan_payload": {"plan_id": "p"}, "source_inventory": {"files": ["synthetic"]}, "diagnostics": {"causal_decomposition_status": "not_supported_by_frozen_inputs"}}, destination)
+            self.assertIsNone(publish_gate6_report({"run_id": "r", "plan_id": "p", "dataset_id": "mcd", "phase": "fixture", "hop_rows": [hop], "clip_rows": [clip], "subject_rows": [], "category_rows": [], "plan_payload": {"plan_id": "p"}, "source_inventory": {"files": ["synthetic"]}, "diagnostics": {"causal_decomposition_status": "not_supported_by_frozen_inputs"}}, destination))
             verify_gate6_publication(destination)
             (destination / "parity_per_hop.csv").write_text("tampered", encoding="utf-8")
             with self.assertRaises(ContractValidationError): verify_gate6_publication(destination)

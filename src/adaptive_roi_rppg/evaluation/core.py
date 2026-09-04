@@ -14,7 +14,7 @@ from typing import Any, Mapping, Sequence
 
 from adaptive_roi_rppg.contracts import (ClipManifest, LabelFrame, ManifestStatus,
     ROI_NAMES, canonical_json_bytes, read_json_object, require_structurally_complete,
-    sha256_file)
+    publish_directory, sha256_file)
 from adaptive_roi_rppg.contracts.errors import ContractValidationError
 from adaptive_roi_rppg.control import CONTROL_CONFIG_ID, OBSERVATION_SCHEMA_ID, control_step, initial_control_state
 from adaptive_roi_rppg.data.mcd import (MCD_DATASET_ID, MCD_SCHEMA_ID,
@@ -422,15 +422,6 @@ def _write_text_exclusive(path: Path, text: str) -> None:
     with path.open("x", encoding="utf-8", newline="") as handle: handle.write(text)
 
 
-def _prepare_destination(destination: str | os.PathLike[str]) -> Path:
-    root=Path(destination)
-    if root.exists() or root.is_symlink(): _fail("destination must not already exist")
-    if root.parent.is_symlink() or not root.parent.is_dir(): _fail("destination parent must be an existing real directory")
-    try: root.mkdir()
-    except FileExistsError: _fail("destination appeared during publication")
-    return root
-
-
 def _publish_started(root: Path, provenance: RunProvenance, plan: FrozenEvaluationPlan | None) -> None:
     _write_json_exclusive(root/"STARTED.json", {"schema":_PUBLICATION_SCHEMA,"state":"started","run_id":provenance.run_id,"plan_id":None if plan is None else plan.plan_id,"expected_files":list(SUBSTANTIVE_FILES)})
 
@@ -446,18 +437,22 @@ def _publish_complete(root: Path, provenance: RunProvenance, plan: FrozenEvaluat
 
 def _publish_result(result: Mapping[str, Any], destination: str | os.PathLike[str], provenance: RunProvenance | None = None) -> Path:
     if provenance is not None and result.get("provenance") != provenance: _fail("provenance mismatch")
-    root=_prepare_destination(destination); actual=result["provenance"]; plan=result["plan"]
-    _publish_started(root, actual, plan)
-    try:
-        _write_substantive_files(result, root); _verify_substantive_tree(root)
-        _verify_internal_rows(root, plan, actual)
-        _publish_complete(root, actual, plan)
-        verify_publication_structure(root)
-        return root
-    except Exception as original:
-        try: _publish_failed(root, actual, plan, "EVALUATION_FAILED" if not (root/"per_hop.csv").exists() else "PUBLICATION_FAILED", "evaluate" if not (root/"per_hop.csv").exists() else "publish")
-        except Exception: pass
-        raise original
+    actual=result["provenance"]; plan=result["plan"]
+    stage = {"value": "publish"}
+    def write_artifacts(path: Path) -> None:
+        stage["value"] = "publish"
+        _write_substantive_files(result, path)
+    root = publish_directory(
+        destination,
+        write_started=lambda path: _publish_started(path, actual, plan),
+        write_artifacts=write_artifacts,
+        validate_precomplete=lambda path: (_verify_substantive_tree(path), _verify_internal_rows(path, plan, actual)),
+        write_complete=lambda path: _publish_complete(path, actual, plan),
+        write_failed=lambda path: _publish_failed(path, actual, plan, "EVALUATION_FAILED" if stage["value"] == "evaluate" else "PUBLICATION_FAILED", stage["value"]),
+        substantive_files=SUBSTANTIVE_FILES,
+    )
+    verify_publication_structure(root)
+    return root
 
 
 def publish_evaluation(result: Mapping[str, Any], destination: str | os.PathLike[str], provenance: RunProvenance | None = None) -> Path:
@@ -465,14 +460,26 @@ def publish_evaluation(result: Mapping[str, Any], destination: str | os.PathLike
 
 
 def evaluate_and_publish(manifest_tree: str | os.PathLike[str], state_root: str | os.PathLike[str], gt_root: str | os.PathLike[str], provenance: RunProvenance, destination: str | os.PathLike[str], plan: FrozenEvaluationPlan | None = None) -> Path:
-    root=_prepare_destination(destination); _publish_started(root, provenance, plan)
-    try:
-        result=evaluate(manifest_tree, state_root, gt_root, provenance, plan)
-        _write_substantive_files(result, root); _verify_substantive_tree(root); _verify_internal_rows(root, result["plan"], provenance); _publish_complete(root, provenance, result["plan"]); verify_publication_structure(root); return root
-    except Exception as original:
-        try: _publish_failed(root, provenance, plan, "EVALUATION_FAILED" if not (root/"per_hop.csv").exists() else "PUBLICATION_FAILED", "evaluate" if not (root/"per_hop.csv").exists() else "publish")
-        except Exception: pass
-        raise original
+    result: dict[str, Any] = {}
+    stage = {"value": "evaluate"}
+    def write_artifacts(root: Path) -> None:
+        stage["value"] = "evaluate"
+        result.update(evaluate(manifest_tree, state_root, gt_root, provenance, plan))
+        stage["value"] = "publish"
+        _write_substantive_files(result, root)
+    def write_failed(root: Path) -> None:
+        _publish_failed(root, provenance, result.get("plan", plan), "EVALUATION_FAILED" if stage["value"] == "evaluate" else "PUBLICATION_FAILED", stage["value"])
+    root = publish_directory(
+        destination,
+        write_started=lambda path: _publish_started(path, provenance, plan),
+        write_artifacts=write_artifacts,
+        validate_precomplete=lambda path: (_verify_substantive_tree(path), _verify_internal_rows(path, result["plan"], provenance)),
+        write_complete=lambda path: _publish_complete(path, provenance, result["plan"]),
+        write_failed=write_failed,
+        substantive_files=SUBSTANTIVE_FILES,
+    )
+    verify_publication_structure(root)
+    return root
 
 
 def _provenance_from_publication(root: Path) -> RunProvenance:

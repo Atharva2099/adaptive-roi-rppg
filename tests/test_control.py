@@ -97,11 +97,6 @@ class ControlTests(unittest.TestCase):
         with self.assertRaises(ContractValidationError):
             ControlTransition(t.dataset_id, t.clip_id, t.hop_idx, t.observation, t.action_decision, t.selected_measurement, t.pre_belief, t.post_belief, t.frame_provenance_id, t.signal_config_id, "other")
 
-    def test_smoke_acceptance_requires_executed_invalid(self):
-        from scripts.verify_gate4_mcd_smoke import accepted_selected_invalid
-        self.assertFalse(accepted_selected_invalid([{"invalid_selected": 0}, {"invalid_selected": 0}]))
-        self.assertTrue(accepted_selected_invalid([{"invalid_selected": 0}, {"invalid_selected": 1}]))
-
     def test_import_closure_and_no_label_or_reward_surface(self):
         path = "src/adaptive_roi_rppg/control/core.py"
         with open(path, encoding="utf-8") as handle: text = handle.read().lower()

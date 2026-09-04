@@ -1,6 +1,5 @@
 import csv
 import hashlib
-import importlib
 import inspect
 import json
 import math
@@ -179,6 +178,8 @@ class EvaluationTests(unittest.TestCase):
             with self.assertRaisesRegex(ContractValidationError, "forced"): publish_evaluation(result, self.root / "failed")
         self.assertTrue((self.root / "failed" / "STARTED.json").exists())
         self.assertTrue((self.root / "failed" / "FAILED.json").exists())
+        failed = json.loads((self.root / "failed" / "FAILED.json").read_text())
+        self.assertEqual((failed["error_code"], failed["stage"]), ("PUBLICATION_FAILED", "publish"))
 
     def test_failed_marker_write_preserves_original_error_and_started(self):
         result = evaluate(self.manifest, self.state, self.gt, self.provenance)
@@ -195,63 +196,6 @@ class EvaluationTests(unittest.TestCase):
             self.assertTrue((root / "STARTED.json").is_file())
             return original(value, root)
         with mock.patch("adaptive_roi_rppg.evaluation.core._write_substantive_files", side_effect=check_started): publish_evaluation(result, destination)
-
-    def test_gate5_smoke_main_end_to_end(self):
-        smoke = importlib.import_module("scripts.verify_gate5_mcd_smoke")
-        output = self.root / "smoke-output"
-        argv = [
-            "verify_gate5_mcd_smoke.py",
-            "--manifest-tree", str(self.manifest),
-            "--state-root", str(self.state),
-            "--gt-root", str(self.gt),
-            "--output-dir", str(output),
-            "--code-snapshot-sha256", "c" * 64,
-        ]
-        with mock.patch.object(smoke.sys, "argv", argv), mock.patch.dict(
-            smoke.os.environ, {"SLURM_JOB_ID": "test-job", "SLURMD_NODENAME": "test-node"}, clear=False
-        ):
-            self.assertEqual(smoke.main(), 0)
-        self.assertEqual(
-            {path.name for path in output.iterdir()},
-            {"per_hop.csv", "per_clip.csv", "subject_summary.csv", "run_summary.json", "run_manifest.json", "artifacts.sha256", "STARTED.json", "COMPLETE.json"},
-        )
-        verify_publication_structure(output)
-        verify_publication_against_sources(output, self.manifest, self.state, self.gt)
-
-    def test_gate5_smoke_rejects_unsafe_output_parents_before_scratch(self):
-        smoke = importlib.import_module("scripts.verify_gate5_mcd_smoke")
-        file_parent = self.root / "file-parent"
-        file_parent.write_text("not a directory")
-        symlink_parent = self.root / "symlink-parent"
-        symlink_parent.symlink_to(self.root, target_is_directory=True)
-        cases = (
-            (self.root / "missing" / "output", self.root / "missing"),
-            (file_parent / "output", file_parent),
-            (symlink_parent / "output", symlink_parent),
-        )
-        before = set(self.root.iterdir())
-        for output, parent in cases:
-            argv = [
-                "verify_gate5_mcd_smoke.py",
-                "--manifest-tree", str(self.manifest),
-                "--state-root", str(self.state),
-                "--gt-root", str(self.gt),
-                "--output-dir", str(output),
-                "--code-snapshot-sha256", "c" * 64,
-            ]
-            with self.subTest(parent=parent):
-                with mock.patch.object(smoke.sys, "argv", argv), mock.patch.dict(
-                    smoke.os.environ, {"SLURM_JOB_ID": "test-job", "SLURMD_NODENAME": "test-node"}, clear=False
-                ), mock.patch.object(smoke.tempfile, "mkdtemp", side_effect=AssertionError("scratch must not be created")), mock.patch.object(
-                    smoke, "build_train_full_face_plan", side_effect=AssertionError("launcher must fail before planning")
-                ):
-                    with self.assertRaisesRegex(SystemExit, "output-dir parent"):
-                        smoke.main()
-                self.assertFalse(output.exists())
-        self.assertFalse((self.root / "missing").exists())
-        self.assertTrue(file_parent.is_file())
-        self.assertTrue(symlink_parent.is_symlink())
-        self.assertEqual(set(self.root.iterdir()), before)
 
     def test_mixed_marker_set_is_rejected(self):
         result = evaluate(self.manifest, self.state, self.gt, self.provenance)

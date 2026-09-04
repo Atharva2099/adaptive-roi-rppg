@@ -14,7 +14,7 @@ from typing import Any, Mapping, Sequence
 
 import numpy as np
 
-from adaptive_roi_rppg.contracts import ROI_NAMES, canonical_json_bytes, sha256_file
+from adaptive_roi_rppg.contracts import ROI_NAMES, canonical_json_bytes, publish_directory, sha256_file
 from adaptive_roi_rppg.contracts.errors import ContractValidationError
 from adaptive_roi_rppg.control import belief_step, control_step, initial_control_state
 from adaptive_roi_rppg.evaluation.parity import HistoricalCacheBinding
@@ -367,12 +367,9 @@ def _validate_crossover_rows(rows: Sequence[Mapping[str, Any]], subject_ids: Seq
 
 
 def publish_crossover_shard(rows: Sequence[Mapping[str, Any]], destination: str | Path, *, shard_index: int, shard_count: int, plan_id: str = "gate6.1", phase: str = "full", code_snapshot_sha256: str = "", source_inventory_sha256: str = "", subject_ids: Sequence[str] = (), command: str = "", node: str = "", job_id: str = "") -> None:
-    root = Path(destination)
-    if root.exists() or root.is_symlink() or not root.parent.is_dir(): _fail("shard output must be fresh")
-    root.mkdir()
     started = {"state": "started", "plan_id": plan_id, "phase": phase, "shard_index": shard_index, "shard_count": shard_count, "code_snapshot_sha256": code_snapshot_sha256, "source_inventory_sha256": source_inventory_sha256, "command": command, "node": node, "job_id": job_id}
-    (root / "STARTED.json").write_text(json.dumps(started, sort_keys=True), encoding="utf-8")
-    try:
+    failed = {"state": "failed", **{key: value for key, value in started.items() if key != "state"}}
+    def write_artifacts(root):
         if shard_count < 1 or not 0 <= shard_index < shard_count: _fail("invalid shard index/count")
         if len(code_snapshot_sha256) != 64 or len(source_inventory_sha256) != 64: _fail("missing provenance hashes")
         if not command or not node or not job_id: _fail("missing command/node/job provenance")
@@ -383,18 +380,12 @@ def publish_crossover_shard(rows: Sequence[Mapping[str, Any]], destination: str 
         (root / "artifacts.sha256").write_text(f"{digest}  shard.json\n", encoding="utf-8")
         _validate_shard_precomplete(root)
         _validate_shard_precomplete_integrity(root, payload, digest)
-        (root / "COMPLETE.json").write_text(json.dumps({"state": "complete", "plan_id": plan_id, "phase": phase, "code_snapshot_sha256": code_snapshot_sha256, "source_inventory_sha256": source_inventory_sha256, "command": command, "node": node, "job_id": job_id, "shard_index": shard_index, "shard_count": shard_count, "sha256": digest}, sort_keys=True), encoding="utf-8")
-        # COMPLETE is the final publication operation. Do not perform a
-        # fallible validation after it becomes visible.
-    except Exception:
-        if (root / "COMPLETE.json").exists():
-            raise
-        for path in root.iterdir():
-            if path.name not in {"STARTED.json"}:
-                path.unlink()
-        (root / "FAILED.json").write_text(json.dumps({"state": "failed", "plan_id": plan_id, "phase": phase, "code_snapshot_sha256": code_snapshot_sha256, "source_inventory_sha256": source_inventory_sha256, "command": command, "node": node, "job_id": job_id, "shard_index": shard_index, "shard_count": shard_count}, sort_keys=True), encoding="utf-8")
-        _validate_marker_tree(root, False)
-        raise
+    def write_marker(root, payload):
+        with (root / ("STARTED.json" if payload["state"] == "started" else "COMPLETE.json" if payload["state"] == "complete" else "FAILED.json")).open("x") as handle:
+            json.dump(payload, handle, sort_keys=True)
+    publish_directory(destination, write_started=lambda root: write_marker(root, started), write_artifacts=write_artifacts,
+                      validate_precomplete=lambda root: None, write_complete=lambda root: write_marker(root, {"state": "complete", **{key: value for key, value in started.items() if key != "state"}, "sha256": sha256_file(root / "shard.json")}),
+                      write_failed=lambda root: write_marker(root, failed), substantive_files=("shard.json", "artifacts.sha256"))
 
 
 def _merge_crossover_shards_impl(shard_dirs: Sequence[str | Path], destination: str | Path, *, bootstrap_replicates: int = 2000, seed: int = 6101, expected_phase: str = "full", expected_plan_id: str | None = None, expected_code_snapshot_sha256: str | None = None, expected_source_inventory_sha256: str | None = None, expected_clip_subjects: Mapping[str, str] | None = None, expected_clip_metadata: Mapping[str, Mapping[str, str]] | None = None, merged_provenance: Mapping[str, str] | None = None) -> dict[str, Any]:
@@ -502,12 +493,10 @@ def _merge_crossover_shards_impl(shard_dirs: Sequence[str | Path], destination: 
 
 
 def merge_crossover_shards(shard_dirs: Sequence[str | Path], destination: str | Path, *, bootstrap_replicates: int = 2000, seed: int = 6101, expected_phase: str = "full", expected_plan_id: str | None = None, expected_code_snapshot_sha256: str | None = None, expected_source_inventory_sha256: str | None = None, expected_clip_subjects: Mapping[str, str] | None = None, expected_clip_metadata: Mapping[str, Mapping[str, str]] | None = None, merged_provenance: Mapping[str, str] | None = None) -> dict[str, Any]:
-    root = Path(destination)
-    if root.exists() or root.is_symlink() or not root.parent.is_dir(): _fail("merged output must be fresh")
-    root.mkdir()
-    (root / "STARTED.json").write_text(json.dumps({"state": "started", **dict(merged_provenance or {})}, sort_keys=True), encoding="utf-8")
-    try:
-        result = _merge_crossover_shards_impl(shard_dirs, root, bootstrap_replicates=bootstrap_replicates, seed=seed, expected_phase=expected_phase, expected_plan_id=expected_plan_id, expected_code_snapshot_sha256=expected_code_snapshot_sha256, expected_source_inventory_sha256=expected_source_inventory_sha256, expected_clip_subjects=expected_clip_subjects, expected_clip_metadata=expected_clip_metadata, merged_provenance=merged_provenance)
+    result_box = {}
+    provenance = dict(merged_provenance or {})
+    def write_artifacts(root):
+        result_box["result"] = _merge_crossover_shards_impl(shard_dirs, root, bootstrap_replicates=bootstrap_replicates, seed=seed, expected_phase=expected_phase, expected_plan_id=expected_plan_id, expected_code_snapshot_sha256=expected_code_snapshot_sha256, expected_source_inventory_sha256=expected_source_inventory_sha256, expected_clip_subjects=expected_clip_subjects, expected_clip_metadata=expected_clip_metadata, merged_provenance=merged_provenance)
         expected_report = {"STARTED.json", "report.json", "artifacts.sha256"}
         if {p.name for p in root.iterdir()} != expected_report: _fail("merged output file set is invalid before COMPLETE")
         started = json.loads((root / "STARTED.json").read_text(encoding="utf-8"))
@@ -515,21 +504,14 @@ def merge_crossover_shards(shard_dirs: Sequence[str | Path], destination: str | 
         report = json.loads((root / "report.json").read_text(encoding="utf-8"))
         if report.get("provenance") != dict(merged_provenance or {}): _fail("merged report provenance mismatch")
         if any(started.get(key) != (merged_provenance or {}).get(key) for key in ("plan_id", "phase", "code_snapshot_sha256", "source_inventory_sha256", "command", "node", "job_id")): _fail("merged STARTED provenance mismatch")
-        complete = {"state": "complete", **dict(merged_provenance or {}), "sha256": sha256_file(root / "report.json")}
-        (root / "COMPLETE.json").write_text(json.dumps(complete, sort_keys=True), encoding="utf-8")
-        # COMPLETE is the final publication operation; all validations above
-        # are deliberately before it.
-        return result
-    except Exception:
-        if (root / "COMPLETE.json").exists():
-            raise
-        for path in root.iterdir():
-            if path.name != "STARTED.json": path.unlink()
-        (root / "FAILED.json").write_text(json.dumps({"state": "failed", **dict(merged_provenance or {})}, sort_keys=True), encoding="utf-8")
-        if {p.name for p in root.iterdir()} != {"STARTED.json", "FAILED.json"}: _fail("failed output marker set is invalid")
-        failed = json.loads((root / "FAILED.json").read_text(encoding="utf-8"))
-        if failed.get("state") != "failed" or any(failed.get(key) != (merged_provenance or {}).get(key) for key in ("plan_id", "phase", "code_snapshot_sha256", "source_inventory_sha256", "command", "node", "job_id")): _fail("merged FAILED marker is invalid")
-        raise
+    def write_marker(root, state):
+        name = "STARTED.json" if state == "started" else "COMPLETE.json" if state == "complete" else "FAILED.json"
+        with (root / name).open("x") as handle:
+            json.dump({"state": state, **provenance, **({"sha256": sha256_file(root / "report.json")} if state == "complete" else {})}, handle, sort_keys=True)
+    publish_directory(destination, write_started=lambda root: write_marker(root, "started"), write_artifacts=write_artifacts,
+                      validate_precomplete=lambda root: None, write_complete=lambda root: write_marker(root, "complete"),
+                      write_failed=lambda root: write_marker(root, "failed"), substantive_files=("report.json", "artifacts.sha256"))
+    return result_box["result"]
 
 
 __all__ = ["ACTION_COUNT", "ARM_IDS", "LEARNED_ARM_STATUS", "HISTORICAL_ORACLE_STATUS", "score_historical_arm", "score_current_arm", "build_crossover_rows", "aggregate_crossover", "publish_crossover_shard", "merge_crossover_shards"]

@@ -26,7 +26,9 @@ A separate train-wide missingness diagnostic, E-021, found that no-fill measurem
 
 Gate 3 establishes implementation conformance, synthetic known-answer behavior, authenticated train-only data access, exact timing, and deterministic structure. It does not establish real-MCD HR accuracy, historical parity, controller quality, transfer, or generalization. The six smoke clips had valid measurements at every hop and therefore do not exercise real missing-data failure behavior. No historical code was copied or imported, and no historical repository is a dependency.
 
-Slurm smoke command:
+The Gate 3 smoke runner was retired from current HEAD after gate acceptance.
+The accepted run remains reproducible by checking out (or creating a worktree
+at) historical commit `feecad9`, then running the command there:
 
 ```text
 PYTHONPATH=src python3 scripts/verify_gate3_mcd_smoke.py --manifest-tree PATH --state-root PATH --output-dir PATH --code-snapshot-sha256 SHA256

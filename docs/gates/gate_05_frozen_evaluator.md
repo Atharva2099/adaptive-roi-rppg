@@ -20,6 +20,10 @@ The six substantive files are `per_hop.csv`, `per_clip.csv`, `subject_summary.cs
 
 The real-data smoke is Slurm-only. The accepted run covered 12 MCD train clips, 2 subjects, and 2,059 hops. Equal-clip mean MAE was `6.494966476398912`; there were 37 invalid selected measurements and zero overrides. The eight direct files were `per_hop.csv`, `per_clip.csv`, `subject_summary.csv`, `run_summary.json`, `run_manifest.json`, `artifacts.sha256`, `STARTED.json`, and `COMPLETE.json`; all were present and verified. The run passed 72 Linux tests in 39.970 seconds. SHA-256 evidence-member checks and structural verification passed; repeat substantive outputs matched; source-bound recomputation passed; a tampered source produced `STARTED.json` plus `FAILED.json` with no `COMPLETE.json` or substantive outputs; and an existing destination was preserved.
 
+The Gate 5 smoke runner was retired from current HEAD after gate acceptance.
+To reproduce the accepted run, check out (or create a worktree at) historical
+commit `feecad9`, then run this Slurm-only command there:
+
 ```text
 PYTHONPATH=src python3 scripts/verify_gate5_mcd_smoke.py --manifest-tree ... --state-root ... --gt-root ... --output-dir ... --code-snapshot-sha256 <64 lowercase hex>
 ```
