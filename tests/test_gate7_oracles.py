@@ -7,12 +7,14 @@ from unittest.mock import patch
 
 from adaptive_roi_rppg.contracts import LabelFrame, MeasurementFrame, ROI_NAMES, ROIMeasurement
 from adaptive_roi_rppg.contracts.errors import ContractValidationError
+from adaptive_roi_rppg.control import CONTROL_CONFIG_PAYLOAD, MIN_HOLD
 from adaptive_roi_rppg.evaluation.oracles import ORACLE_SCHEMA, aggregate_report, legal_actions, replay_action_sequence, run_oracle_clip, validate_aggregation
 from adaptive_roi_rppg.labels.mcd import GT_RULE_ID
 from adaptive_roi_rppg.signal import POS_CONFIG_ID
 from scripts.verify_gate7_mcd_oracles import (TEACHER_EXCLUSION_CONTRACT, _expected_hop, _merge, _plan,
                                                _run, _same_semantics, _validate_complete_marker,
                                                _validate_payload, _validate_rows, _write_json_exclusive)
+from scripts.verify_gate7_mcd_oracles import _args
 
 
 def _frame(hop, values):
@@ -52,6 +54,16 @@ def _plan_fixture(*, missing_exclusion=False, eval_clips_per_subject=6):
 
 
 class Gate7OracleTests(unittest.TestCase):
+    def test_cli_rejects_non_protocol_beam_width_before_planning(self):
+        with self.assertRaises(SystemExit):
+            _args(["--output-dir", "out", "--manifest-tree", "manifest", "--state-root", "state",
+                   "--gt-root", "gt", "--code-snapshot-sha256", "a" * 64, "--beam-width", "7"])
+
+    def test_oracle_and_controller_share_minimum_hold_configuration(self):
+        from adaptive_roi_rppg.evaluation import oracles
+        self.assertEqual(oracles.MIN_HOLD, MIN_HOLD)
+        self.assertEqual(MIN_HOLD, CONTROL_CONFIG_PAYLOAD["actions"]["minimum_hold"])
+
     def test_declared_exclusion_contract_is_ordered_and_immutable(self):
         self.assertEqual(
             [(record.clip_id, record.expected_invalid_label_count, record.invalid_reason)

@@ -109,7 +109,7 @@ Fail closed for unknown ROI order, missing fields, hash mismatch, duplicate keys
 
 ## Implementation order and gates
 
-Gate 1 contracts and validators are complete. Gate 2 passed independent review and full-data MCD acceptance on Polaris job `46838`. Gate 3 and Gate 4 are currently accepted under the repaired-reader authority of Polaris job `47260`. Gate 5 is accepted under Polaris job `47300`. Gate 6 is accepted under Polaris job `47313`. The implementation order remains fixed:
+Gate 1 contracts and validators are complete. Gate 2 passed independent review and full-data MCD acceptance on Polaris job `46838`. Gate 3 and Gate 4 are accepted under the repaired-reader authority of Polaris job `47260`. Gate 5 is accepted under Polaris job `47300`. Gate 6 is accepted under Polaris job `47313`. Gate 7 is accepted for the MCD-train Oracle B/C teacher diagnostic, Gate 8 is accepted for frozen MCD model evaluation, and Gate 9 is the incomplete evaluation-only MMPD path. The implementation order remains fixed:
 
 1. Contracts and validators.
 2. MCD manifest/split adapter.
@@ -117,9 +117,10 @@ Gate 1 contracts and validators are complete. Gate 2 passed independent review a
 4. Belief tracker and action legality.
 5. Frozen evaluator and row-level outputs.
 6. Historical parity replay on a small MCD fixture, then full MCD parity.
-7. MCD-only training adapters.
-8. MMPD frozen-evaluation adapter last.
+7. MCD-only Oracle B/C teacher diagnostic.
+8. Frozen MCD evaluation of existing checkpoints.
+9. MMPD frozen-evaluation adapter last.
 
 No training is allowed until gates 1-6 pass. Acceptance gates are schema round-trip, no-GT inference import closure, MMPD-to-training import prohibition, synthetic HR accuracy, missing-data causality test, clip-reset test, proposed/executed action test, split leakage test, hash-tamper test, row aggregation test, and parity discrepancy report.
 
-Gate 5 is accepted as the frozen train-only evaluator. Gate 6 is accepted as an observational historical parity report: job `47313` covered 533 MCD evaluation clips, 89 subjects, and 91,227 joined hops; historical equal-clip MAE was `12.386529570502146` BPM and current equal-clip MAE was `12.631680651991282` BPM. Differences were categorized with zero unclassified rows. The frozen inputs do not support causal decomposition, so this does not establish controller quality, training value, transfer, or generalization. Gate 7 MCD-only training adapter work may begin under the existing MMPD boundary.
+Gate 5 is accepted as the frozen train-only evaluator. Gate 6 is accepted as an observational historical parity report: job `47313` covered 533 MCD evaluation clips, 89 subjects, and 91,227 joined hops; historical equal-clip MAE was `12.386529570502146` BPM and current equal-clip MAE was `12.631680651991282` BPM. Differences were categorized with zero unclassified rows. The frozen inputs do not support causal decomposition, so this does not establish controller quality, training value, transfer, or generalization. Gates 7 and 8 are accepted only within their stated MCD diagnostic/evaluation boundaries. Gate 9 remains the last, evaluation-only MMPD stage and cannot inform MCD training or tuning decisions.

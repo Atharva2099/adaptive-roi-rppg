@@ -13,6 +13,15 @@ This document solely owns evidence paths, hashes, sizes, artifact mtimes, cohort
 
 Current status: E-023 and E-024 remain historical evidence. E-025 supersedes them only as the current Gate 3/4 acceptance authority after the descriptor-based reader repair; their artifacts and numerical observations remain unchanged. E-026 is the accepted Gate 5 authority. E-027 is the accepted Gate 6 authority. E-030 is the accepted Gate 7 MCD-train Oracle B/C teacher-diagnostic authority. E-031 is the accepted Gate 8 frozen MCD model-evaluation authority. E-028 remains historical `SUPERSEDED`/`INCOMPLETE` status and preserves the repair history for jobs `47404`-`47407`; it supplies no accepted final number. E-029 remains historical implementation-review evidence and is superseded by E-031.
 
+Interpretation refinements for E-030 and E-031: Oracle C is the noncausal
+width-8 beam teacher. Gate 7's accepted point estimates are
+uncertainty-incomplete because no paired subject-level CI was published; a
+future rerun requires CSV-first row-level outputs and paired subject-level
+uncertainty. Gate 8 family values are arithmetic means over independent seed
+checkpoints, not ensembles. Checkpoint identity and replay were verified;
+original training lineage and training-config provenance remain descriptive
+and unverified.
+
 Gate 5 is accepted by E-026. Jobs `47272` and `47273` remain superseded publication attempts because publication was incomplete at `/Users/924254653/adaptive_roi_gate5_accept_20260813.nkWHmn` and `/Users/924254653/adaptive_roi_gate5_linuxfix_20260813.f7PC6s`; probe `47274` remains a negative result establishing that `renameat2` with an absent target returns `EINVAL`. Job `47292` is retained as a pre-smoke negative for quoting. Job `47293` is retained as a pre-smoke negative for AppleDouble metadata. None changes the accepted E-026 result.
 
 | ID | Claim or question | Evidence class and verification | Dataset / split / cohort | Ruler and aggregation | Primary row-level artifact | SHA-256 | Size bytes | Artifact mtime UTC | Supporting manifest or method source | Audited/recomputed value | Uncertainty or required control | Limit or supersession |

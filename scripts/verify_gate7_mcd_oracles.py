@@ -59,7 +59,10 @@ def _args(argv=None):
     parser.add_argument("--beam-width", type=int, default=8)
     parser.add_argument("--merge-workers", type=int, default=16,
                         help="bounded source-authoritative merge workers (1..16)")
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    if args.beam_width != 8:
+        parser.error("Gate 7 accepted protocol requires --beam-width 8")
+    return args
 
 
 def _require_slurm():

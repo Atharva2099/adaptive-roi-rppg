@@ -25,7 +25,7 @@ material. Do not merge the snapshot branch wholesale.
 | `codex/verification-prune` | Integrated | Its reviewed patch is in `main` as `c80122c`; the commit hash differs because it was applied on top of the latest `origin/main`. |
 | `codex/pre-canonical-integration-snapshot-20260904` | WIP preservation | Source for selective recovery only. No scientific claim is accepted by this snapshot. |
 | `codex/gate9-dirty-snapshot-20260821` | Superseded snapshot | Preserve by tag until the newer WIP snapshot has been compared; never merge wholesale. |
-| `codex/gate9-minimal-rebuild` | Active but incomplete | MMPD evaluation-only engineering reference. `p29_3`, authenticated inputs, and end-to-end scientific evaluation remain unresolved. |
+| `codex/gate9-minimal-rebuild` | Staged/integrated on canonical candidate, incomplete | MMPD evaluation-only engineering reference staged on the canonical candidate, but not yet in `main`. `p29_3`, authenticated inputs, and end-to-end scientific evaluation remain unresolved. |
 | `codex/mcd-failure-audit` | Experimental / NO-GO | Preserve useful audit code, but causal replay, factual parity, and provenance must pass before results are accepted. |
 | `codex/mcd-repeated-beam-smoke` | Experimental diagnostic | Preserve as a source for a lean repeated-correction path. Do not treat branch presence as behavioral evidence. |
 | `codex/mcd-eval-oracle-test` | Experimental | Review for distinct scientific value before retaining any held-out Oracle runner. |

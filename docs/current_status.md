@@ -10,8 +10,9 @@
 | 4. Belief tracker and action legality | Complete: core unchanged and real-data acceptance restored on Polaris job `47260` |
 | 5. Frozen evaluator and row-level outputs | Complete: accepted on Polaris job `47300` with reproducible immutable outputs |
 | 6. Historical parity replay on a small MCD fixture, then full MCD parity | Complete: SOL-reviewed and accepted on Polaris job `47313` |
-| 7. MCD-only training adapters | Complete for the frozen MCD Oracle B/C teacher diagnostic; no deployable model result is claimed |
+| 7. MCD-only Oracle B/C teacher diagnostic | Complete for the frozen MCD train diagnostic; Oracle C is a noncausal width-8 beam teacher, and no deployable policy/model result is claimed |
 | 8. Frozen MCD evaluation of existing RecurrentPPO checkpoints | Complete: accepted MCD-only result on Polaris job `47417`; no retraining or MMPD access |
+| 9. MMPD frozen evaluation adapter | Incomplete engineering path; evaluation-only and blocked pending authenticated inputs, provenance binding, and final compatibility review |
 
 Gate 2 passed independent SOL review and full-data acceptance on Polaris job `46838`. Gate 3's state reader was repaired so one immutable byte capture is both hashed and parsed, then independently SOL-reviewed and reaccepted on Polaris job `47260`. Gate 4 core was unchanged; job `47260` restored its real-data acceptance through the repaired reader. Gate 5 is now accepted on job `47300`. No training or MMPD access is authorized.
 
@@ -37,13 +38,18 @@ The Gate 4 core was unchanged. Job `47260` reran its seven train clips and two a
 
 ## Gate 6 acceptance
 
-The exact 12-clip fixture passed on Polaris job `47311` with 2,063 joined hops and zero unclassified rows. The full 533-clip/89-subject MCD replay passed on job `47313` in `2:04:28` on `lmn01`, with 91,227 joined hops and zero unclassified rows. Historical equal-clip MAE was `12.386529570502146` BPM and current equal-clip MAE was `12.631680651991282` BPM. This is observational ruler-difference evidence only. See [the Gate 6 note](gates/gate_06_historical_parity.md). Gate 7 MCD-only training adapter work may now begin under the existing MMPD boundary.
+The exact 12-clip fixture passed on Polaris job `47311` with 2,063 joined hops and zero unclassified rows. The full 533-clip/89-subject MCD replay passed on job `47313` in `2:04:28` on `lmn01`, with 91,227 joined hops and zero unclassified rows. Historical equal-clip MAE was `12.386529570502146` BPM and current equal-clip MAE was `12.631680651991282` BPM. This is observational ruler-difference evidence only. See [the Gate 6 note](gates/gate_06_historical_parity.md). The next stages are the accepted Gate 7 MCD teacher diagnostic, the accepted Gate 8 frozen MCD evaluation, and the incomplete evaluation-only Gate 9 MMPD path.
 
 Gate 7 is accepted for the frozen MCD-train Oracle B/C teacher diagnostic on Polaris job `47411`, which completed with exit `0` in `01:35:35` on `lmn01`. The merged output is `/Users/924254653/adaptive_roi_gate7_oracle_runs_20260814_r2/full-47411/merged`; all 16 shards completed, `COMPLETE.json` exists, and no `FAILED.json` exists. The eligible cohort is 3,057 clips from 510 subjects and contains 523,610 hops. Oracle B (`greedy_b`) has clip-equal MAE `3.8833134521974753` BPM and 222,613 switches; Oracle C (`beam_c`) has clip-equal MAE `2.5482841213115375` BPM and 204,798 switches; `dCB = B-C = 1.3350293308859372` BPM. These are current MCD-train teacher diagnostics, not deployable model scores, and are not directly comparable to legacy test90 or cache values. Fixture job `47404` remains successful engineering evidence only. Jobs `47405` and `47406` failed before evaluation and remain historical launcher failures. Job `47407` remains `SUPERSEDED`/`INCOMPLETE`: shards 0–14 used the old v2/3,060-clip plan, shard 15 rejected the three 7412 clips, and no merge or final result exists. Those shards cannot be reused because the v3 plan payload changes.
 
 Gate 8 is accepted for the frozen MCD model evaluation on Polaris job `47417`. The final report covers 533 clips, 89 subjects, 91,227 hops per method, full-face plus nine frozen checkpoints, and 10,000 subject-bootstrap replicates. Full-face equal-clip MAE is `12.631680651997897` BPM; the family means are DAgger `8.471633637516538`, Standard PPO `7.991317152305402`, and Advantage PPO `7.623211434460554` BPM. The merged artifacts and hashes are recorded as E-031 and in [the Gate 8 note](gates/gate_08_mcd_frozen_models.md). Jobs `47415` and `47416` are successful repeat preflights. Failed job `47412` is preserved as a serialization repair record: invalid selected measurements had blank confidence/PPR fields, which were made nullable only for invalid rows. This result is MCD-only; it does not authorize retraining or make an MMPD transfer claim.
 
 ## Project references
+
+Gate 8 family values are arithmetic means over independent seed checkpoints,
+not ensembles. Checkpoint identity and replay were verified, while original
+training lineage remains descriptive and unverified. Gate 9 is the final,
+evaluation-only MMPD stage and does not feed MMPD findings back into MCD.
 
 - [System design](system_design.md)
 - [Data contract](data_contract.md)
