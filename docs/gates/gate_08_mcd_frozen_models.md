@@ -30,6 +30,50 @@ ensemble score and not a deployment ensemble. Checkpoint identity and replay
 were verified from the sealed evaluation artifacts; the original training
 lineage remains descriptive and unverified.
 
+## Matched held-out Oracle headroom: 2026-09-03
+
+Polaris job `48872` evaluated Oracle B and Oracle C on the same retained MCD
+evaluation cohort: 533 clips, 89 subjects, and 91,227 hops per Oracle. It used
+four subject-disjoint workers and a source-authoritative merge. The job
+completed `0:0` in `01:23:59` on `lmn02`. Lower MAE is better.
+
+| Offline diagnostic | Equal-clip MAE (BPM) | 95% subject-block CI (BPM) |
+|---|---:|---:|
+| Oracle B, greedy current-hop choice | 3.7328 | 3.3331 to 4.1656 |
+| Oracle C, width-8 sequence beam | 2.3724 | 2.0348 to 2.7429 |
+| B minus C | 1.3604 | 1.2486 to 1.4826 |
+
+The confidence intervals use 10,000 paired subject resamples over the 89
+subjects, seed `48872`, and sorted zero-based indices 249 and 9749. Independent
+job `48896` rebuilt both equal-clip means from every stored hop row and matched
+the report. Job `48897` produced the subject-block intervals. All four shard
+hashes and the merged report hash passed.
+
+The accepted Advantage PPO seed mean from E-031 is 7.6232 BPM. Its arithmetic
+gap is 3.8904 BPM above Oracle B and 5.2508 BPM above Oracle C. These are
+matched descriptive differences, not jointly bootstrapped model-versus-Oracle
+comparisons.
+
+Oracle B uses current ground truth to select the legal action with the lowest
+post-belief error at each hop. Oracle C searches action sequences using future
+ground truth and keeps eight trajectories. Both are offline, GT-informed, and
+non-deployable. Oracle C is also noncausal and approximate, so its number is a
+headroom diagnostic rather than an achievable policy score.
+
+```text
+ROOT=/Users/924254653/adaptive_roi_mcd_eval_oracle_runs_20260903/full-48872/merged
+report.json       144,439,998 bytes  sha256 0741a432b0ebf0f2d1f0facb98423e0951596fd4d34d3c5e140f27dc43783bbc
+artifacts.sha256           78 bytes  sha256 7b2d3563df71b5b9f64a4c355f748ae989734bd7be99ef0c88fc8d056340f1cd
+STARTED.json            1,564 bytes  sha256 a6722992b4cd3aa9fdaef9a09f697e82a00bae30a6762ab1f886313e95f3668f
+COMPLETE.json           1,641 bytes  sha256 9be62e2e66eae91b2c35cda13ec6cf45ec9a4c266a8bbcbb26fc4548a3483c8b
+```
+
+The runner was isolated at commit `604780f`; the recorded execution snapshot
+is `b60805d376007c37e55937ee76460357f5d3a06e1a20855612671c56a3b3c091`.
+Job `48871` failed before evaluation because its scheduler log changed the
+source-directory hash. It produced no scientific result and was superseded by
+job `48872`. Evidence authority is E-033.
+
 ## Historical comparison
 
 The legacy values use the legacy causal replay and the same 533-clip names/checkpoint identities where available. They are a reference, not a matched pipeline ablation.

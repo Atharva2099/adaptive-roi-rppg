@@ -1,0 +1,16 @@
+{
+  "schema": "mcd-repeated-correction-beam-full-v1",
+  "dataset_id": "mcd",
+  "source_type": "full_frozen_eval",
+  "clip_count": 533,
+  "subject_count": 89,
+  "seeds": [0, 1, 2],
+  "task_count": 1599,
+  "task_mapping": "task_index = 3 * source_plan_clip_position + seed",
+  "window_hops": 15,
+  "primary_width": 8,
+  "sensitivity_widths": [1, 2, 4, 8, 16, 32],
+  "ranking": "offline_gt_immediate_post_update_abs_error_then_action_index",
+  "retention": "cumulative_abs_error_then_endpoint_abs_error_then_executed_sequence_then_origin_sequence",
+  "scope": "MCD-only offline diagnostic across the authenticated frozen 533-clip evaluation cohort. GT-informed alternatives are headroom only and cannot be used for training, tuning, rewards, checkpoint selection, or deployment. MMPD is not accessed."
+}

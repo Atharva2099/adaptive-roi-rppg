@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="580">
+<rect width="100%" height="100%" fill="white"/>
+<text x="640" y="30" text-anchor="middle" font-family="Arial" font-size="20" font-weight="bold">MCD: distance of GT outside the lowest-to-highest ROI POS range</text>
+<text x="330.0" y="70" text-anchor="middle" font-family="Arial" font-size="16" font-weight="bold">GT lower than lowest ROI</text>
+<text x="330.0" y="91" text-anchor="middle" font-family="Arial" font-size="13">All valid recovered ROI estimates too high</text>
+<line x1="70" y1="450" x2="590" y2="450" stroke="#222"/>
+<line x1="70" y1="110" x2="70" y2="450" stroke="#222"/>
+<line x1="70.0" y1="450" x2="70.0" y2="455" stroke="#222"/><text x="70.0" y="473" text-anchor="middle" font-family="Arial" font-size="12">0</text>
+<line x1="65" y1="450.0" x2="590" y2="450.0" stroke="#ddd"/><text x="60" y="454.0" text-anchor="end" font-family="Arial" font-size="12">0</text>
+<line x1="200.0" y1="450" x2="200.0" y2="455" stroke="#222"/><text x="200.0" y="473" text-anchor="middle" font-family="Arial" font-size="12">6</text>
+<line x1="65" y1="365.0" x2="590" y2="365.0" stroke="#ddd"/><text x="60" y="369.0" text-anchor="end" font-family="Arial" font-size="12">32</text>
+<line x1="330.0" y1="450" x2="330.0" y2="455" stroke="#222"/><text x="330.0" y="473" text-anchor="middle" font-family="Arial" font-size="12">12</text>
+<line x1="65" y1="280.0" x2="590" y2="280.0" stroke="#ddd"/><text x="60" y="284.0" text-anchor="end" font-family="Arial" font-size="12">64</text>
+<line x1="460.0" y1="450" x2="460.0" y2="455" stroke="#222"/><text x="460.0" y="473" text-anchor="middle" font-family="Arial" font-size="12">19</text>
+<line x1="65" y1="195.0" x2="590" y2="195.0" stroke="#ddd"/><text x="60" y="199.0" text-anchor="end" font-family="Arial" font-size="12">95</text>
+<line x1="590.0" y1="450" x2="590.0" y2="455" stroke="#222"/><text x="590.0" y="473" text-anchor="middle" font-family="Arial" font-size="12">25</text>
+<line x1="65" y1="110.0" x2="590" y2="110.0" stroke="#ddd"/><text x="60" y="114.0" text-anchor="end" font-family="Arial" font-size="12">127</text>
+<rect x="70.00" y="110.00" width="19.80" height="340.00" fill="#D55E00" opacity=".82"/>
+<rect x="90.80" y="225.12" width="19.80" height="224.88" fill="#D55E00" opacity=".82"/>
+<rect x="111.60" y="227.80" width="19.80" height="222.20" fill="#D55E00" opacity=".82"/>
+<rect x="132.40" y="225.12" width="19.80" height="224.88" fill="#D55E00" opacity=".82"/>
+<rect x="153.20" y="356.30" width="19.80" height="93.70" fill="#D55E00" opacity=".82"/>
+<rect x="174.00" y="391.10" width="19.80" height="58.90" fill="#D55E00" opacity=".82"/>
+<rect x="194.80" y="385.75" width="19.80" height="64.25" fill="#D55E00" opacity=".82"/>
+<rect x="215.60" y="372.36" width="19.80" height="77.64" fill="#D55E00" opacity=".82"/>
+<rect x="236.40" y="399.13" width="19.80" height="50.87" fill="#D55E00" opacity=".82"/>
+<rect x="257.20" y="391.10" width="19.80" height="58.90" fill="#D55E00" opacity=".82"/>
+<rect x="278.00" y="417.87" width="19.80" height="32.13" fill="#D55E00" opacity=".82"/>
+<rect x="298.80" y="417.87" width="19.80" height="32.13" fill="#D55E00" opacity=".82"/>
+<rect x="319.60" y="433.94" width="19.80" height="16.06" fill="#D55E00" opacity=".82"/>
+<rect x="340.40" y="425.91" width="19.80" height="24.09" fill="#D55E00" opacity=".82"/>
+<rect x="361.20" y="423.23" width="19.80" height="26.77" fill="#D55E00" opacity=".82"/>
+<rect x="382.00" y="444.65" width="19.80" height="5.35" fill="#D55E00" opacity=".82"/>
+<rect x="402.80" y="439.29" width="19.80" height="10.71" fill="#D55E00" opacity=".82"/>
+<rect x="423.60" y="450.00" width="19.80" height="0.00" fill="#D55E00" opacity=".82"/>
+<rect x="444.40" y="439.29" width="19.80" height="10.71" fill="#D55E00" opacity=".82"/>
+<rect x="465.20" y="436.61" width="19.80" height="13.39" fill="#D55E00" opacity=".82"/>
+<rect x="486.00" y="444.65" width="19.80" height="5.35" fill="#D55E00" opacity=".82"/>
+<rect x="506.80" y="439.29" width="19.80" height="10.71" fill="#D55E00" opacity=".82"/>
+<rect x="527.60" y="441.97" width="19.80" height="8.03" fill="#D55E00" opacity=".82"/>
+<rect x="548.40" y="444.65" width="19.80" height="5.35" fill="#D55E00" opacity=".82"/>
+<rect x="569.20" y="439.29" width="19.80" height="10.71" fill="#D55E00" opacity=".82"/>
+<line x1="180.94" y1="110" x2="180.94" y2="450" stroke="#222" stroke-width="2" stroke-dasharray="6,4"/>
+<text x="586" y="135" text-anchor="end" font-family="Arial" font-size="13">n = 620</text>
+<text x="586" y="155" text-anchor="end" font-family="Arial" font-size="13">mean = 5.3 BPM</text>
+<text x="586" y="175" text-anchor="end" font-family="Arial" font-size="13">median = 3.1 BPM</text>
+<text x="586" y="195" text-anchor="end" font-family="Arial" font-size="12">shown: 608; &gt;=25 BPM: 12</text>
+<text x="330.0" y="500" text-anchor="middle" font-family="Arial" font-size="13">Distance outside ROI range (BPM; 1-BPM bins, shown to 25)</text>
+<text x="950.0" y="70" text-anchor="middle" font-family="Arial" font-size="16" font-weight="bold">GT higher than highest ROI</text>
+<text x="950.0" y="91" text-anchor="middle" font-family="Arial" font-size="13">All valid recovered ROI estimates too low</text>
+<line x1="690" y1="450" x2="1210" y2="450" stroke="#222"/>
+<line x1="690" y1="110" x2="690" y2="450" stroke="#222"/>
+<line x1="690.0" y1="450" x2="690.0" y2="455" stroke="#222"/><text x="690.0" y="473" text-anchor="middle" font-family="Arial" font-size="12">0</text>
+<line x1="685" y1="450.0" x2="1210" y2="450.0" stroke="#ddd"/><text x="680" y="454.0" text-anchor="end" font-family="Arial" font-size="12">0</text>
+<line x1="820.0" y1="450" x2="820.0" y2="455" stroke="#222"/><text x="820.0" y="473" text-anchor="middle" font-family="Arial" font-size="12">6</text>
+<line x1="685" y1="365.0" x2="1210" y2="365.0" stroke="#ddd"/><text x="680" y="369.0" text-anchor="end" font-family="Arial" font-size="12">178</text>
+<line x1="950.0" y1="450" x2="950.0" y2="455" stroke="#222"/><text x="950.0" y="473" text-anchor="middle" font-family="Arial" font-size="12">12</text>
+<line x1="685" y1="280.0" x2="1210" y2="280.0" stroke="#ddd"/><text x="680" y="284.0" text-anchor="end" font-family="Arial" font-size="12">356</text>
+<line x1="1080.0" y1="450" x2="1080.0" y2="455" stroke="#222"/><text x="1080.0" y="473" text-anchor="middle" font-family="Arial" font-size="12">19</text>
+<line x1="685" y1="195.0" x2="1210" y2="195.0" stroke="#ddd"/><text x="680" y="199.0" text-anchor="end" font-family="Arial" font-size="12">535</text>
+<line x1="1210.0" y1="450" x2="1210.0" y2="455" stroke="#222"/><text x="1210.0" y="473" text-anchor="middle" font-family="Arial" font-size="12">25</text>
+<line x1="685" y1="110.0" x2="1210" y2="110.0" stroke="#ddd"/><text x="680" y="114.0" text-anchor="end" font-family="Arial" font-size="12">713</text>
+<rect x="690.00" y="113.81" width="19.80" height="336.19" fill="#0072B2" opacity=".82"/>
+<rect x="710.80" y="110.00" width="19.80" height="340.00" fill="#0072B2" opacity=".82"/>
+<rect x="731.60" y="172.95" width="19.80" height="277.05" fill="#0072B2" opacity=".82"/>
+<rect x="752.40" y="147.19" width="19.80" height="302.81" fill="#0072B2" opacity=".82"/>
+<rect x="773.20" y="260.21" width="19.80" height="189.79" fill="#0072B2" opacity=".82"/>
+<rect x="794.00" y="281.67" width="19.80" height="168.33" fill="#0072B2" opacity=".82"/>
+<rect x="814.80" y="339.37" width="19.80" height="110.63" fill="#0072B2" opacity=".82"/>
+<rect x="835.60" y="297.88" width="19.80" height="152.12" fill="#0072B2" opacity=".82"/>
+<rect x="856.40" y="347.95" width="19.80" height="102.05" fill="#0072B2" opacity=".82"/>
+<rect x="877.20" y="347.00" width="19.80" height="103.00" fill="#0072B2" opacity=".82"/>
+<rect x="898.00" y="339.37" width="19.80" height="110.63" fill="#0072B2" opacity=".82"/>
+<rect x="918.80" y="380.86" width="19.80" height="69.14" fill="#0072B2" opacity=".82"/>
+<rect x="939.60" y="389.44" width="19.80" height="60.56" fill="#0072B2" opacity=".82"/>
+<rect x="960.40" y="386.10" width="19.80" height="63.90" fill="#0072B2" opacity=".82"/>
+<rect x="981.20" y="376.56" width="19.80" height="73.44" fill="#0072B2" opacity=".82"/>
+<rect x="1002.00" y="396.12" width="19.80" height="53.88" fill="#0072B2" opacity=".82"/>
+<rect x="1022.80" y="408.04" width="19.80" height="41.96" fill="#0072B2" opacity=".82"/>
+<rect x="1043.60" y="403.27" width="19.80" height="46.73" fill="#0072B2" opacity=".82"/>
+<rect x="1064.40" y="394.68" width="19.80" height="55.32" fill="#0072B2" opacity=".82"/>
+<rect x="1085.20" y="428.06" width="19.80" height="21.94" fill="#0072B2" opacity=".82"/>
+<rect x="1106.00" y="420.43" width="19.80" height="29.57" fill="#0072B2" opacity=".82"/>
+<rect x="1126.80" y="423.77" width="19.80" height="26.23" fill="#0072B2" opacity=".82"/>
+<rect x="1147.60" y="422.82" width="19.80" height="27.18" fill="#0072B2" opacity=".82"/>
+<rect x="1168.40" y="431.40" width="19.80" height="18.60" fill="#0072B2" opacity=".82"/>
+<rect x="1189.20" y="432.83" width="19.80" height="17.17" fill="#0072B2" opacity=".82"/>
+<line x1="858.61" y1="110" x2="858.61" y2="450" stroke="#222" stroke-width="2" stroke-dasharray="6,4"/>
+<text x="1206" y="135" text-anchor="end" font-family="Arial" font-size="13">n = 6,159</text>
+<text x="1206" y="155" text-anchor="end" font-family="Arial" font-size="13">mean = 8.1 BPM</text>
+<text x="1206" y="175" text-anchor="end" font-family="Arial" font-size="13">median = 5.3 BPM</text>
+<text x="1206" y="195" text-anchor="end" font-family="Arial" font-size="12">shown: 5,868; &gt;=25 BPM: 291</text>
+<text x="950.0" y="500" text-anchor="middle" font-family="Arial" font-size="13">Distance outside ROI range (BPM; 1-BPM bins, shown to 25)</text>
+<text x="25" y="280" transform="rotate(-90 25 280)" text-anchor="middle" font-family="Arial" font-size="13">Number of hops</text><text x="640" y="555" text-anchor="middle" font-family="Arial" font-size="11" fill="#555">Dashed line: overall mean; summary retains all tail values.</text></svg>

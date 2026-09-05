@@ -15,3 +15,7 @@ Production preflight requires an authenticated 299-entry raw-source inventory wh
 A read-only workspace check found 33 MAT files in the legacy `MMPD random group` directory, not the required 299-clip cohort. The legacy environment contains a MediaPipe Tasks model asset, but the one-clip `p1_0` extraction smoke could not initialize the CPU face-landmarker on this macOS runtime because the graph still requested `kGpuService`/NSOpenGL. This is preserved as an environment limitation, not converted into a result.
 
 The read-only command `ssh polaris ...` was also attempted for the missing full cohort and failed at local DNS resolution (`polaris.sfsu.edu`, `Could not resolve hostname`). This does not establish remote job failure; it only means the required remote input/run audit could not be performed from this session.
+
+## Current extraction visual diagnostic
+
+`scripts/diagnose_current_extraction.py` with `slurm/diagnose_current_extraction.slurm` remains a distinct, read-only two-source visual diagnostic. It compares one named MCD raw-video/state pair and one named MMPD MAT clip, writes per-frame/per-hop CSVs and contact sheets, and fails on invalid extraction or selected POS. It is not a training or evaluation path and cannot feed MMPD findings into MCD decisions.
