@@ -2,6 +2,14 @@
 
 This is the clean rebuild of the adaptive semantic ROI controller for causal classical rPPG. The system design and interfaces are approved. Build the implementation in the gated order defined in `docs/system_design.md`.
 
+## Communication between agents
+
+- Write all agent handoffs, questions, progress updates, and final reports in clear, concise English. Use complete sentences, correct grammar and punctuation, and proper spaces between words and numbers. Preserve exact code identifiers, paths, commands, and error messages.
+- Start each handoff with the task and expected result. State the relevant evidence, scope, file ownership, constraints, and acceptance criteria without repeating unrelated conversation history.
+- Report findings with concrete file references and verification results. Distinguish observed facts from assumptions, and state blockers and the next action plainly. Avoid compressed shorthand, unexplained abbreviations, and unnecessary jargon.
+- Follow the active four-role workflow. The root passes relevant findings between agents and resolves conflicting reports. Agents may ask one another focused questions when useful, but must report decisions and blockers to the root and must not expand their scope or spawn other agents.
+- Remind each implementation agent that it shares the workspace: preserve others' edits and modify only its assigned files.
+
 ## Dataset custody and independence
 
 - **Absolute MMPD rule:** MMPD is evaluation-only. Never use MMPD data, labels, metadata, subjects, conditions, or evaluation outcomes to train, fine-tune, calibrate, select checkpoints or hyperparameters, design rewards or features, build curricula, or early-stop.
