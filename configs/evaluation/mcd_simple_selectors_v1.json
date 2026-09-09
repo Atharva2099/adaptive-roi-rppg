@@ -1,0 +1,13 @@
+{
+  "schema": "mcd-simple-selectors-v1",
+  "dataset_id": "mcd",
+  "split": "eval",
+  "cohort": {"original_eval_clip_count": 540, "clip_count": 533, "subject_count": 89, "expected_hops": 91227},
+  "arms": ["full_face", "max_ppr", "advantage_ppo_seed0", "advantage_ppo_seed1", "advantage_ppo_seed2"],
+  "arms_not_rerun": {"random_legal": "historical causal streaming evaluation on the same 533 clips and 91,227 hops: uniform random ROI requests passed through minimum hold scored 13.365749628547157 BPM versus matched full-face 12.386529570502145 BPM; historical context only because the current pipeline was not rerun"},
+  "max_ppr": {"score": "measurement.peak_power_ratio", "valid_only": true, "tie": "current_executed_then_lowest_roi_index", "all_invalid": "previous_action_then_roi_0", "minimum_hold": 2,
+    "score_rationale": "confidence = ppr * coverage is coverage-dominated: in the 2026-09-08 12-clip smoke, full_face coverage was 0.93 versus 0.04-0.13 for patches while PPR stayed flat at 0.178-0.188, so the confidence rule selected ROI 0 on 100% of hops."},
+  "random_legal": {"seed": 8101, "derivation": "sha256(mcd-simple-random-v1\\0|global_seed|clip_id|hop_idx), first 8 bytes unsigned big-endian", "python_hash_forbidden": true},
+  "bootstrap": {"replicates": 10000, "seed": 8101, "unit": "subject", "estimands": ["equal_clip_mae_difference_max_ppr_minus_mean_advantage_seed_clip_maes", "equal_clip_mae_difference_max_ppr_minus_full_face"]},
+  "accepted_context": {"full_face_mae_bpm": 12.631680651997897, "oracle_b_mae_bpm": 3.7328175200960665}
+}
