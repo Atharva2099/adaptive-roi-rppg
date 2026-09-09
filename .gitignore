@@ -22,6 +22,7 @@ ENV/
 # Editors and local tooling
 .idea/
 .vscode/
+.claude_session
 *.swp
 *.swo
 .pytest_cache/
