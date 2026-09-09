@@ -8,6 +8,7 @@ dependencies = ["numpy>=2.2,<3", "scipy>=1.17,<2"]
 [project.optional-dependencies]
 model-eval = ["stable-baselines3==2.8.0", "sb3-contrib==2.8.0", "gymnasium==1.2.3", "torch==2.10.0", "cloudpickle==3.1.2"]
 mmpd-eval = ["mediapipe>=0.10.14,<0.11"]
+observation-probe = ["scikit-learn>=1.5,<2"]
 
 [tool.uv]
 package = false

@@ -68,9 +68,8 @@ same-state alternative transitions. Alternatives never chain and ground truth
 can change only scored error columns.
 
 Run date: 2026-09-08. Cluster: Polaris (`n1.hpc.at.sfsu.edu`), partition
-`cpucluster`, account `researchers`, QoS `simple-qos`. Code authored and
-executed under Claude Code with model Opus 5 (`claude-opus-5`); job submission
-was performed by the user.
+`cpucluster`, account `researchers`, QoS `simple-qos`. Job submission was
+performed by the user.
 
 This note records measurements only. Interpretation is not included.
 

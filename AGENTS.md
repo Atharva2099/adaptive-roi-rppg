@@ -50,7 +50,7 @@ Do not run the diagnostic until the comparison is fair and the result that would
 ## Implementation and engineering discipline
 
 - During debugging and experiment work, start with the observed behavior and trace the actual data/code path to a fix. Treat project labels, run markers, hashes, and protective framework code as background metadata; do not introduce, foreground, or discuss them unless they directly help solve the current technical problem.
-- Research runners must use Slurm job state and exit status, logs, and direct output checks to establish execution and result completeness. Do not introduce or require `STARTED.json`, `FAILED.json`, `COMPLETE.json`, custom lifecycle markers, or layered publication/save-guard frameworks unless the user explicitly requests them. Historical marker requirements in design documents do not override this rule or block a new run. Preserve existing historical artifacts.
+- There will be no verifier module, no lifecycle markers, no `COMPLETE.json`, and no test-run scaffolding in the research path. Keep one direct runner, one fixed configuration, and only a few focused unit tests, then run the full probe once. Use Slurm job state and exit status, logs, direct output checks, and essential checks inside the scientific runner to establish execution and result completeness. Historical marker requirements in design documents do not override this rule or block a new run. Preserve existing historical artifacts.
 - Keep scientific checks proportional and direct: verify the intended cohort, ground-truth separation, relevant baseline reproduction, complete output rows, and uncertainty calculations. A successful Slurm exit establishes execution success; inspect the results before making scientific claims. Record the command, inputs, configuration, and seeds without adding a custom completion protocol.
 - Follow the implementation order and acceptance gates in `docs/system_design.md`. No training is allowed until gates 1-6 pass.
 - Keep the repository small. Production code belongs under `src/`; launchers belong under `scripts/` or `slurm/`.
@@ -67,19 +67,18 @@ Do not run the diagnostic until the comparison is fair and the result that would
 
 ## Before numerics or training
 
-Before running numerical code or training, record exact provenance and run:
+Before running numerical code or training, record exact provenance and confirm:
 
-1. A synthetic known-answer smoke test, including short, empty, and NaN inputs where relevant.
-2. Dataset split and leakage checks, including subject-level separation.
-3. Subject-level uncertainty reporting and the row-level artifacts needed to reproduce it.
+1. Dataset split and leakage checks, including subject-level separation.
+2. Subject-level uncertainty reporting and the row-level artifacts needed to reproduce it.
 
 Any later implementation must include tests appropriate to its interfaces and must document the evaluation ruler, fixed inputs, and failure limits. No experiment is complete until its source, configuration, command, outputs, and limitations are recorded.
 
 ## Compute safety
 
 - Run heavy work through Slurm. Never run long CPU or GPU workloads on the Polaris login node.
-- Before any parallel job, test the actual parallel path on Linux/Polaris. Confirm worker speedup or safe failure, use an explicit multiprocessing context where needed, and set thread limits before Python imports numerical libraries.
-- Any recurrent training-path change must pass a tiny Polaris GPU smoke that exercises prediction followed by backward propagation before a full job is submitted.
+- Parallel jobs must use an explicit multiprocessing context where needed, set thread limits before Python imports numerical libraries, propagate worker failures, and record actual-job timing.
+- Recurrent training-path changes require focused unit coverage of prediction and backward propagation before submission; do not add a separate smoke job.
 - Preserve the job ID, exact command, configuration, code commit, input hashes, output paths, logs, and output hashes for every remote run.
 - Never use `rsync --delete` without explicit authorization for the exact deletion scope.
 - Do not treat a local SSH or DNS failure as proof that Polaris or a remote job failed. Verify scheduler state and logs directly.
@@ -113,7 +112,7 @@ The following values were read directly from Polaris on **2026-09-08** using `si
 | `highmem` | Unlimited in partition configuration | Work with a demonstrated large-memory need |
 
 - The current user association is account `researchers`, allowed QoS `simple-qos`. This QoS has **MaxJobsPU=2** (running jobs per user) and **MaxSubmitPU=5** (submitted jobs, including pending and running). Its MaxWall field and the association's default QoS were blank. Specify `--qos=simple-qos` explicitly; do not assume other listed QoS names are available to this user.
-- Request a finite `--time` based on measured runtime with reasonable margin, within the applicable partition/QoS/association limits. Examples: `00:15:00` for a short smoke, `04:00:00` for a measured multi-hour evaluation, or `16:00:00` for a long CPU run. These are request examples, not extra QoS tiers. Do not choose `highmem` merely to evade a time limit.
+- Request a finite `--time` based on measured runtime with reasonable margin, within the applicable partition/QoS/association limits. Examples: `00:15:00` for a short analysis, `04:00:00` for a measured multi-hour evaluation, or `16:00:00` for a long CPU run. These are request examples, not extra QoS tiers. Do not choose `highmem` merely to evade a time limit.
 - Recheck limits and current occupancy with:
 
 ```bash

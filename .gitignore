@@ -23,6 +23,9 @@ ENV/
 .idea/
 .vscode/
 .claude_session
+.claude/
+.codex/
+.codex_session
 *.swp
 *.swo
 .pytest_cache/
@@ -38,6 +41,11 @@ htmlcov/
 /.env.*
 !/.env.example
 *.local
+
+# Local presentation drafts and inspection output
+/docs/presentations/Wednesday_2026-09-02_v*.pptx
+/docs/presentations/2026-09-02_research_update_materials/
+*.inspect.ndjson
 
 # Local datasets and generated artifacts
 /data/

@@ -1,0 +1,14 @@
+{
+  "schema": "mcd-observation-probe-config-v1",
+  "question": "Can either the full observation or an ROI-local-plus-shared encoding predict which valid ROI has the lowest immediate counterfactual error?",
+  "source_job": "49143",
+  "source_files": ["shard-*/observations_advantage_ppo_seed1.csv", "shard-*/per_hop.csv"],
+  "features": {"full_101": "all obs_000..obs_100 plus 12-column ROI one-hot (113 features)", "local_shared": "candidate obs_{7*k}..obs_{7*k+6} plus obs_084..obs_100 and 12-column ROI one-hot (36 features)", "validity": "obs_{7*k+6}"},
+  "free_hop_rule": "hop_idx == 0 or obs_100 >= 0.2",
+  "model": {"name": "HistGradientBoostingRegressor", "max_iter": 100, "learning_rate": 0.1, "max_leaf_nodes": 31, "l2_regularization": 0.0, "random_state": 8101},
+  "split": {"name": "GroupKFold", "full_folds": 5, "group": "subject_id"},
+  "arms": ["full_101_probe", "full_101_shuffled", "local_shared_probe", "local_shared_shuffled", "majority", "ppo_factual", "oracle"],
+  "bootstrap": {"replicates": 10000, "seed": 8101, "unit": "subject", "aggregation": "equal clip means"},
+  "hypotheses": {"H1": "probe regret is lower than majority", "H2": "probe regret is lower than shuffled", "H3": "probe regret is lower than PPO factual"},
+  "limits": ["single-hop counterfactuals do not form sequential trajectories", "free hops are conditioned on PPO behavior", "no MMPD data or tuning", "no sequential MAE comparison to PPO"]
+}
